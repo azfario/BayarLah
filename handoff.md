@@ -4,9 +4,9 @@ This handoff is for continuing BayarLah on a Linux machine. The project is a Mal
 
 - Vercel hosts the Next.js app.
 - Supabase hosts Postgres and public storage.
-- IP ServerOne NovaCloud runs a long-lived Dockerized OpenWA worker.
+- IP ServerOne NovaCloud runs a long-lived Dockerized OpenWA Gateway plus a lightweight BayarLah reminder poller.
 
-The most important rule: keep OpenWA, Puppeteer, Chrome, and worker-only imports out of the Vercel app runtime. Anything that touches `@open-wa/wa-automate` must stay under `workers/whatsapp`.
+The most important rule: keep browser automation and worker-only runtime concerns out of the Vercel app runtime. Vercel should talk to OpenWA Gateway only through server-side REST calls.
 
 ## Current Product Flow
 
@@ -28,8 +28,8 @@ The most important rule: keep OpenWA, Puppeteer, Chrome, and worker-only imports
   - required WhatsApp Web linking status
 - Per-user WhatsApp linking:
   - `WhatsappLinkStatus`: `NOT_LINKED`, `LINKING`, `LINKED`, `FAILED`
-  - worker API starts a per-user OpenWA session
-  - app polls worker status through a Vercel-safe route
+  - server action creates and starts a per-user OpenWA Gateway session
+  - app polls session status through a Vercel-safe route
   - changing profile phone resets WhatsApp linking
 - Friend management:
   - add/delete friends
@@ -61,8 +61,8 @@ The most important rule: keep OpenWA, Puppeteer, Chrome, and worker-only imports
   - success advances `lastReminderAt` and `nextReminderAt`
   - failure logs error and delays retry
 - Docker:
-  - full local demo compose: app plus worker
-  - worker-only compose for local/NovaCloud-style runs
+  - full local demo compose: app plus OpenWA Gateway plus reminder poller
+  - worker-only compose for local/NovaCloud-style OpenWA and poller runs
   - NovaCloud compose with Caddy HTTPS edge
 
 ## Important Files
@@ -75,8 +75,8 @@ The most important rule: keep OpenWA, Puppeteer, Chrome, and worker-only imports
   - Reminder range validation, parsing, display, and next-date helpers.
 - `lib/whatsapp.ts`
   - Phone/chat ID helper and reminder message helper.
-- `lib/whatsapp-worker.ts`
-  - Vercel-safe HTTP client for the private worker API.
+- `lib/openwa.ts`
+  - Vercel-safe HTTP client for OpenWA Gateway.
 - `lib/actions/profile.ts`
   - Profile save and WhatsApp linking server actions.
 - `lib/actions/expenses.ts`
@@ -92,9 +92,9 @@ The most important rule: keep OpenWA, Puppeteer, Chrome, and worker-only imports
 - `app/expenses/page.tsx`
   - Recent expenses, reminder status, and "Send now" control.
 - `workers/whatsapp/worker.ts`
-  - OpenWA worker API, session manager, polling loop, and sender.
+  - Lightweight reminder polling loop and OpenWA Gateway sender.
 - `workers/whatsapp/Dockerfile`
-  - Linux worker image with Node 20 and Chromium.
+  - Linux reminder poller image with Node 20.
 - `docker-compose.demo.yml`
   - Full local Docker demo.
 - `docker-compose.worker.yml`
@@ -102,11 +102,11 @@ The most important rule: keep OpenWA, Puppeteer, Chrome, and worker-only imports
 - `docker-compose.novacloud.yml`
   - NovaCloud worker plus Caddy reverse proxy.
 - `deploy/Caddyfile`
-  - Caddy reverse proxy to the worker.
+  - Caddy reverse proxy to OpenWA Gateway.
 
 ## Linux Setup
 
-Use Node 20 LTS. OpenWA has been fragile on newer Node versions, and the previous Windows native run hit OpenWA/Puppeteer issues. Linux with Docker, Node 20, and Chromium is the intended worker path.
+Use Node 20 LTS for BayarLah. OpenWA Gateway runs in its own Docker image on NovaCloud with persistent `/app/data` storage.
 
 Recommended first commands:
 
@@ -136,8 +136,8 @@ DIRECT_URL=
 OCR_SPACE_API_KEY=
 GEMINI_API_KEY=
 GEMINI_MODEL=gemini-2.5-flash
-WHATSAPP_WORKER_BASE_URL=http://localhost:3010
-WHATSAPP_WORKER_API_TOKEN=
+OPENWA_API_BASE_URL=http://localhost:2785/api
+OPENWA_API_KEY=dev-admin-key
 ```
 
 Required worker values:
@@ -145,11 +145,8 @@ Required worker values:
 ```bash
 DATABASE_URL=
 DIRECT_URL=
-WHATSAPP_WORKER_API_TOKEN=
-WHATSAPP_WORKER_API_PORT=3010
-WHATSAPP_SESSION_DATA_PATH=/app/workers/whatsapp/sessions
-WHATSAPP_CHROME_PATH=/usr/bin/chromium
-WHATSAPP_HEADLESS=true
+OPENWA_API_BASE_URL=http://openwa-api:2785/api
+OPENWA_API_KEY=dev-admin-key
 WHATSAPP_WORKER_INTERVAL_MS=5000
 WHATSAPP_RETRY_DELAY_MS=60000
 WHATSAPP_MAX_PER_RUN=20
@@ -161,14 +158,13 @@ For NovaCloud, copy `.env.novacloud.example` to `.env.novacloud` on the VM and s
 WORKER_DOMAIN=your-worker-domain.example.com
 DATABASE_URL=
 DIRECT_URL=
-WHATSAPP_WORKER_API_TOKEN=
 ```
 
-Vercel must use the same worker token and the public HTTPS worker URL:
+Vercel must use OpenWA's generated API key and the public HTTPS gateway URL:
 
 ```bash
-WHATSAPP_WORKER_BASE_URL=https://your-worker-domain.example.com
-WHATSAPP_WORKER_API_TOKEN=same-secret-as-novacloud
+OPENWA_API_BASE_URL=https://your-worker-domain.example.com/api
+OPENWA_API_KEY=generated-openwa-key
 ```
 
 ## Verification Commands
@@ -215,9 +211,9 @@ http://localhost:3000
 This starts:
 
 - Next.js app on port `3000`
-- WhatsApp worker on port `3010`
-- worker API reachable by the app at `http://whatsapp-worker:3010`
-- persistent WhatsApp session volumes
+- OpenWA Gateway on port `2785`
+- reminder poller on the private Docker network
+- persistent OpenWA `/app/data` volume
 
 Worker-only local test:
 
@@ -226,10 +222,11 @@ docker compose -f docker-compose.worker.yml up --build
 npm run dev
 ```
 
-For worker-only mode, `.env.local` should include:
+For host app plus Docker OpenWA mode, `.env.local` should include:
 
 ```bash
-WHATSAPP_WORKER_BASE_URL=http://localhost:3010
+OPENWA_API_BASE_URL=http://localhost:2785/api
+OPENWA_API_KEY=dev-admin-key
 ```
 
 Non-Docker local demo still exists:
@@ -278,10 +275,12 @@ Production target remains split:
   - Prisma through Supabase pooled `DATABASE_URL`
   - no OpenWA imports
 - NovaCloud:
-  - Docker worker container
+  - Docker OpenWA Gateway container
+  - Docker reminder poller container
   - Caddy reverse proxy
-  - persistent WhatsApp session volumes
-  - private API protected by bearer token
+  - persistent OpenWA `/app/data` volume
+  - OpenWA API protected by `X-API-Key`
+  - poller can read the generated OpenWA key from `/openwa-data/.api-key`
 - Supabase:
   - Postgres
   - public storage buckets for profile images and DuitNow QR images
@@ -292,29 +291,31 @@ NovaCloud command:
 docker compose -f docker-compose.novacloud.yml up -d --build
 ```
 
-Only expose ports `80` and `443` publicly. The worker API port `3010` should remain internal behind Caddy.
+Only expose ports `80` and `443` publicly. OpenWA's container port `2785` should remain internal behind Caddy.
 
 Health check:
 
 ```bash
-curl -H "Authorization: Bearer $WHATSAPP_WORKER_API_TOKEN" \
-  https://your-worker-domain.example.com/health
+curl -H "X-API-Key: $OPENWA_API_KEY" \
+  https://your-worker-domain.example.com/api/health
 ```
 
-## Worker API
+## OpenWA Gateway API
 
-The Vercel app talks to the worker through `lib/whatsapp-worker.ts`.
+The Vercel app and reminder poller talk to OpenWA Gateway through `lib/openwa.ts`.
 
-Private endpoints:
+Main endpoints used:
 
-- `GET /health`
-- `POST /sessions/start`
-- `GET /sessions/:sessionId/status`
+- `POST /api/sessions`
+- `POST /api/sessions/:sessionId/start`
+- `GET /api/sessions/:sessionId`
+- `GET /api/sessions/:sessionId/qr`
+- `POST /api/sessions/:sessionId/messages/send-image`
 
 All requests require:
 
 ```text
-Authorization: Bearer WHATSAPP_WORKER_API_TOKEN
+X-API-Key: OPENWA_API_KEY
 ```
 
 Never expose this token to browser code.
@@ -351,7 +352,7 @@ npx prisma generate
 
 - OpenWA is a hackathon/demo sender. It may break if WhatsApp Web changes.
 - Official WhatsApp Business Cloud API is the later production migration path.
-- The browser must never receive the worker API token.
+- The browser must never receive the OpenWA API key.
 - Supabase storage buckets for profile photos and DuitNow QR images must exist and be public for the current demo flow.
 - Receipt photos should remain temporary and should not be persisted.
 - The local Docker demo relies on real Clerk/Supabase/OCR/Gemini values in `.env.local`; Postgres is not containerized.
@@ -362,10 +363,10 @@ npx prisma generate
 Immediate Linux continuation:
 
 1. Run Docker compose validation and full Docker demo build.
-2. Complete the WhatsApp QR link flow in the containerized worker.
+2. Complete the WhatsApp QR link flow through OpenWA Gateway.
 3. Test "Send now" end to end with a real phone number.
 4. Confirm attempt logging and reminder date advancement in Supabase.
-5. Deploy the worker compose to NovaCloud and point Vercel env vars to the Caddy HTTPS URL.
+5. Deploy the NovaCloud compose stack and point Vercel env vars to the Caddy HTTPS URL.
 
 Product milestones still open:
 
@@ -383,7 +384,7 @@ Product milestones still open:
 - Preserve existing user changes.
 - Keep edits scoped.
 - Prefer existing project patterns.
-- Do not add OpenWA imports outside `workers/whatsapp`.
+- Do not add browser automation imports to the Vercel app runtime.
 - Use Docker for worker verification on Linux.
 - Run the verification commands after code changes.
 - Ask before changing deployment assumptions, schema semantics, or notification provider choices.

@@ -7,6 +7,7 @@ const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(scriptDir, "..");
 const envPath = path.join(rootDir, ".env.local");
 const npmCommand = process.platform === "win32" ? "npm.cmd" : "npm";
+const dockerCommand = "docker";
 
 const fileEnv = loadEnvFile(envPath);
 const env = {
@@ -14,36 +15,25 @@ const env = {
   ...fileEnv,
 };
 
-const workerPort = env.WHATSAPP_WORKER_API_PORT || "3010";
-
-applyDefault(env, "WHATSAPP_WORKER_BASE_URL", `http://localhost:${workerPort}`);
-applyDefault(env, "WHATSAPP_WORKER_API_TOKEN", "dev-secret");
-applyDefault(env, "WHATSAPP_WORKER_API_PORT", workerPort);
-applyDefault(
-  env,
-  "WHATSAPP_SESSION_DATA_PATH",
-  path.join(rootDir, "workers", "whatsapp", "sessions")
-);
-applyDefault(env, "WHATSAPP_HEADLESS", "false");
-applyDefault(env, "WHATSAPP_EZQR", "false");
+applyDefault(env, "OPENWA_API_BASE_URL", "http://localhost:2785/api");
+env.OPENWA_API_KEY = "dev-admin-key";
 applyDefault(env, "WHATSAPP_LOG_EMPTY_POLLS", "true");
 applyDefault(env, "WHATSAPP_WORKER_INTERVAL_MS", "5000");
 applyDefault(env, "WHATSAPP_RETRY_DELAY_MS", "60000");
 applyDefault(env, "WHATSAPP_MAX_PER_RUN", "20");
 applyDefault(env, "FORCE_COLOR", "1");
 
-if (!env.WHATSAPP_CHROME_PATH && !env.PUPPETEER_EXECUTABLE_PATH) {
-  const detectedChrome = findChromeExecutable();
-  if (detectedChrome) {
-    env.WHATSAPP_CHROME_PATH = detectedChrome;
-  }
-}
-
 printBanner(env);
 
 const children = [
   startProcess("app", npmCommand, ["run", "dev"]),
-  startProcess("worker", npmCommand, ["run", "whatsapp:worker"]),
+  startProcess("openwa", dockerCommand, [
+    "compose",
+    "-f",
+    "docker-compose.worker.yml",
+    "up",
+    "--build",
+  ]),
 ];
 
 let shuttingDown = false;
@@ -97,63 +87,13 @@ function applyDefault(target, key, value) {
   if (!target[key]) target[key] = value;
 }
 
-function findChromeExecutable() {
-  const candidates =
-    process.platform === "win32"
-      ? [
-          path.join(
-            process.env.PROGRAMFILES || "C:\\Program Files",
-            "Google",
-            "Chrome",
-            "Application",
-            "chrome.exe"
-          ),
-          path.join(
-            process.env["PROGRAMFILES(X86)"] || "C:\\Program Files (x86)",
-            "Google",
-            "Chrome",
-            "Application",
-            "chrome.exe"
-          ),
-          path.join(
-            process.env.LOCALAPPDATA || "",
-            "Google",
-            "Chrome",
-            "Application",
-            "chrome.exe"
-          ),
-        ]
-      : process.platform === "darwin"
-        ? [
-            "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
-            "/Applications/Chromium.app/Contents/MacOS/Chromium",
-          ]
-        : [
-            "/usr/bin/chromium",
-            "/usr/bin/chromium-browser",
-            "/usr/bin/google-chrome",
-            "/usr/bin/google-chrome-stable",
-          ];
-
-  return candidates.find((candidate) => candidate && fs.existsSync(candidate));
-}
-
 function printBanner(currentEnv) {
   console.log("");
   console.log("BayarLah local reminder demo");
   console.log("--------------------------------");
   console.log(`App:        http://localhost:3000`);
-  console.log(`Worker API: ${currentEnv.WHATSAPP_WORKER_BASE_URL}`);
+  console.log(`OpenWA API: ${currentEnv.OPENWA_API_BASE_URL}`);
   console.log(`Worker poll: ${currentEnv.WHATSAPP_WORKER_INTERVAL_MS}ms`);
-  console.log(`Headless:   ${currentEnv.WHATSAPP_HEADLESS}`);
-
-  if (currentEnv.WHATSAPP_CHROME_PATH) {
-    console.log(`Chrome:     ${currentEnv.WHATSAPP_CHROME_PATH}`);
-  } else if (currentEnv.PUPPETEER_EXECUTABLE_PATH) {
-    console.log(`Chrome:     ${currentEnv.PUPPETEER_EXECUTABLE_PATH}`);
-  } else {
-    console.log("Chrome:     not detected, set WHATSAPP_CHROME_PATH in .env.local");
-  }
 
   if (!fs.existsSync(envPath)) {
     console.log("");
@@ -168,7 +108,7 @@ function printBanner(currentEnv) {
   console.log("4. Create an expense with a real recipient phone");
   console.log("5. Click Send now and watch the worker log for SENT");
   console.log("");
-  console.log("Press Ctrl+C to stop the app and worker.");
+  console.log("Press Ctrl+C to stop the app, OpenWA Gateway, and worker.");
   console.log("");
 }
 

@@ -1,4 +1,4 @@
 {$WORKER_DOMAIN} {
   encode zstd gzip
-  reverse_proxy whatsapp-worker:3010
+  reverse_proxy openwa-api:2785
 }

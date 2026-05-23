@@ -6,7 +6,6 @@
     "start": "tsx worker.ts"
   },
   "dependencies": {
-    "@open-wa/wa-automate": "^4.76.0",
     "tsx": "^4.19.2"
   }
 }

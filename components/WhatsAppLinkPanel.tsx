@@ -69,7 +69,7 @@ export default function WhatsAppLinkPanel({
         if (!cancelled) {
           setState((current) => ({
             ...current,
-            errorMessage: "Unable to reach WhatsApp worker.",
+            errorMessage: "Unable to reach OpenWA Gateway.",
           }));
         }
       }

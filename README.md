@@ -18,7 +18,7 @@ BayarLah is a Malaysian fintech hackathon app for recording group expenses and h
 - Saved receipt item history and participant allocations without permanently storing receipt photos.
 - Reminder scheduling copied to every friend share for an expense.
 - Vercel-safe "Send now" queueing for WhatsApp reminders.
-- NovaCloud-only OpenWA worker for per-user WhatsApp Web linking and demo sends with DuitNow QR images.
+- NovaCloud OpenWA Gateway integration for per-user WhatsApp Web linking and demo sends with DuitNow QR images.
 - Delete saved friends and expenses.
 
 ## Stack
@@ -32,7 +32,7 @@ BayarLah is a Malaysian fintech hackathon app for recording group expenses and h
 - Prisma ORM
 - OCR.space API
 - Gemini API
-- OpenWA worker on NovaCloud for WhatsApp demo sending
+- OpenWA Gateway plus a lightweight reminder poller on NovaCloud for WhatsApp demo sending
 
 ## App Routes
 
@@ -81,7 +81,7 @@ For the local WhatsApp reminder demo, use the one-command launcher instead:
 npm run dev:demo
 ```
 
-This loads `.env.local`, starts the Next.js app and OpenWA worker together, applies local demo defaults, auto-detects Chrome when possible, and stops both processes on `Ctrl+C`.
+This loads `.env.local`, starts the Next.js app, starts the OpenWA Gateway plus reminder poller through Docker Compose, applies local demo defaults, and stops the processes on `Ctrl+C`.
 
 ## Environment Variables
 
@@ -97,13 +97,8 @@ This loads `.env.local`, starts the Next.js app and OpenWA worker together, appl
 | `OCR_SPACE_API_KEY` | OCR.space key for receipt text extraction |
 | `GEMINI_API_KEY` | Gemini key for receipt parsing |
 | `GEMINI_MODEL` | Gemini model, defaults to `gemini-2.5-flash` |
-| `WHATSAPP_WORKER_BASE_URL` | Private NovaCloud worker API URL used by the Vercel app |
-| `WHATSAPP_WORKER_API_TOKEN` | Shared secret for Vercel-to-worker API calls |
-| `WHATSAPP_WORKER_API_PORT` | NovaCloud worker API port, defaults to `3010` |
-| `WHATSAPP_SESSION_DATA_PATH` | Persistent OpenWA session directory on the worker VM |
-| `WHATSAPP_CHROME_PATH` | Optional Chrome/Chromium executable path for the NovaCloud worker |
-| `WHATSAPP_HEADLESS` | Set to `false` to show Chrome during local WhatsApp login |
-| `WHATSAPP_EZQR` | Optional OpenWA remote QR helper for first login |
+| `OPENWA_API_BASE_URL` | OpenWA Gateway API URL used by the app and reminder poller |
+| `OPENWA_API_KEY` | Shared secret for BayarLah-to-OpenWA API calls |
 | `WHATSAPP_LOG_EMPTY_POLLS` | Set to `true` to log when no due reminders are found |
 | `WHATSAPP_WORKER_INTERVAL_MS` | NovaCloud worker polling interval |
 | `WHATSAPP_RETRY_DELAY_MS` | Retry delay after failed WhatsApp sends |
@@ -166,13 +161,15 @@ or through npm:
 npm run docker:demo
 ```
 
-This starts the app at [http://localhost:3000](http://localhost:3000) and the OpenWA worker at [http://localhost:3010](http://localhost:3010). The worker runs in Linux with Node 20 and Chromium, and WhatsApp Web session files persist in Docker volumes.
+This starts the app at [http://localhost:3000](http://localhost:3000), OpenWA Gateway at [http://localhost:2785/api](http://localhost:2785/api), and the reminder poller. WhatsApp Web session files persist in the `openwa_data` Docker volume.
+
+Local demo Compose runs OpenWA in development mode, where its API key is `dev-admin-key`.
 
 ## WhatsApp Worker Deployment
 
-The Next.js app can stay on Vercel. Do not install or import OpenWA in the Vercel runtime path.
+The Next.js app can stay on Vercel. Do not run browser automation in Vercel; keep the long-lived OpenWA Gateway on NovaCloud.
 
-The Next.js app stays Vercel-native in production. Docker is for the NovaCloud OpenWA worker and the optional local full-demo setup.
+The Next.js app stays Vercel-native in production. Docker is for the NovaCloud OpenWA Gateway, its persistent session data, and the lightweight reminder poller.
 
 For local Docker worker-only testing:
 
@@ -181,19 +178,21 @@ docker compose -f docker-compose.worker.yml up --build
 npm run dev
 ```
 
-For NovaCloud deployment, copy `.env.novacloud.example` to `.env.novacloud`, set `WORKER_DOMAIN`, database URLs, and `WHATSAPP_WORKER_API_TOKEN`, then run:
+For NovaCloud deployment, copy `.env.novacloud.example` to `.env.novacloud`, set `WORKER_DOMAIN` and database URLs, then run:
 
 ```bash
 docker compose -f docker-compose.novacloud.yml up -d --build
 ```
 
-The NovaCloud compose setup builds `workers/whatsapp/Dockerfile`, installs Chromium, runs OpenWA on the private Docker network, exposes only Caddy on ports `80/443`, and stores WhatsApp Web sessions in persistent Docker volumes.
+The NovaCloud compose setup runs OpenWA Gateway on the private Docker network, builds the BayarLah reminder poller, exposes only Caddy on ports `80/443`, and stores WhatsApp Web sessions in the persistent `openwa_data` volume.
+
+On first boot, OpenWA creates its API key in the `openwa_data` volume at `/app/data/.api-key`. Copy that generated value into Vercel as `OPENWA_API_KEY`; the NovaCloud poller reads it from the shared volume.
 
 Set these Vercel environment variables to connect the app to NovaCloud:
 
 ```bash
-WHATSAPP_WORKER_BASE_URL=https://your-worker-domain
-WHATSAPP_WORKER_API_TOKEN=same-secret-as-novacloud
+OPENWA_API_BASE_URL=https://your-worker-domain/api
+OPENWA_API_KEY=generated-openwa-key
 ```
 
 For a non-Docker VM setup, install the root app dependencies, generate Prisma, then install the worker package:
@@ -205,25 +204,7 @@ npm --prefix workers/whatsapp install
 npm run whatsapp:worker
 ```
 
-Run the worker with PM2 or systemd so the WhatsApp Web sessions stay alive. The worker exposes a private API for the Vercel app to start per-user sessions and fetch QR/status, then polls active due reminders from Supabase and sends the collector's DuitNow QR as an image with the reminder caption.
-
-Set the same `WHATSAPP_WORKER_API_TOKEN` in Vercel and on NovaCloud. Point Vercel's `WHATSAPP_WORKER_BASE_URL` at the worker, for example `https://worker.example.com`.
-
-If Puppeteer cannot find its bundled browser, point the worker at the system Chrome/Chromium binary:
-
-```bash
-# Windows PowerShell
-$env:WHATSAPP_CHROME_PATH="C:\Program Files\Google\Chrome\Application\chrome.exe"
-npm run whatsapp:worker
-
-# Windows PowerShell first-login helper
-$env:WHATSAPP_HEADLESS="false"
-$env:WHATSAPP_CHROME_PATH="C:\Program Files\Google\Chrome\Application\chrome.exe"
-npm run whatsapp:worker
-
-# Ubuntu/NovaCloud example
-WHATSAPP_CHROME_PATH=/usr/bin/chromium-browser npm run whatsapp:worker
-```
+Run the poller with PM2 or systemd only if you are not using Docker Compose. OpenWA Gateway must remain long-lived with persistent `/app/data` storage so WhatsApp Web sessions survive restarts.
 
 ## Roadmap
 

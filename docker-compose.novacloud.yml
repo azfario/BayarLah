@@ -1,4 +1,28 @@
 services:
+  openwa-api:
+    image: ghcr.io/rmyndharis/openwa:latest
+    env_file:
+      - .env.novacloud
+    environment:
+      NODE_ENV: "production"
+      PORT: "2785"
+      DATABASE_TYPE: "sqlite"
+      DATABASE_NAME: "/app/data/openwa.sqlite"
+      DATABASE_SYNCHRONIZE: "true"
+      ENGINE_TYPE: "whatsapp-web.js"
+      SESSION_DATA_PATH: "/app/data/sessions"
+      PUPPETEER_HEADLESS: "true"
+      PUPPETEER_ARGS: "--no-sandbox,--disable-setuid-sandbox,--disable-dev-shm-usage,--disable-gpu"
+      STORAGE_TYPE: "local"
+      STORAGE_LOCAL_PATH: "/app/data/media"
+      PLUGINS_ENABLED: "true"
+      PLUGINS_DIR: "/app/data/plugins"
+    expose:
+      - "2785"
+    volumes:
+      - openwa_data:/app/data
+    restart: unless-stopped
+
   whatsapp-worker:
     build:
       context: .
@@ -7,15 +31,12 @@ services:
     env_file:
       - .env.novacloud
     environment:
-      WHATSAPP_WORKER_API_PORT: "3010"
-      WHATSAPP_SESSION_DATA_PATH: "/app/workers/whatsapp/sessions"
-      WHATSAPP_CHROME_PATH: "/usr/bin/chromium"
-      WHATSAPP_HEADLESS: "true"
-    expose:
-      - "3010"
+      OPENWA_API_BASE_URL: "http://openwa-api:2785/api"
+      OPENWA_API_KEY_FILE: "/openwa-data/.api-key"
+    depends_on:
+      - openwa-api
     volumes:
-      - whatsapp_sessions:/app/workers/whatsapp/sessions
-      - whatsapp_node_persist:/app/workers/whatsapp/.node-persist
+      - openwa_data:/openwa-data:ro
     restart: unless-stopped
 
   caddy:
@@ -23,7 +44,7 @@ services:
     env_file:
       - .env.novacloud
     depends_on:
-      - whatsapp-worker
+      - openwa-api
     ports:
       - "80:80"
       - "443:443"
@@ -34,7 +55,6 @@ services:
     restart: unless-stopped
 
 volumes:
-  whatsapp_sessions:
-  whatsapp_node_persist:
+  openwa_data:
   caddy_data:
   caddy_config:

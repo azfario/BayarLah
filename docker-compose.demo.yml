@@ -10,7 +10,8 @@ services:
       NEXT_TELEMETRY_DISABLED: "1"
       WATCHPACK_POLLING: "true"
       CHOKIDAR_USEPOLLING: "true"
-      WHATSAPP_WORKER_BASE_URL: "http://whatsapp-worker:3010"
+      OPENWA_API_BASE_URL: "http://openwa-api:2785/api"
+      OPENWA_API_KEY: "dev-admin-key"
     ports:
       - "3000:3000"
     volumes:
@@ -19,7 +20,30 @@ services:
       - app_next:/app/.next
     command: sh -c "npx prisma generate && npm run dev -- --hostname 0.0.0.0"
     depends_on:
+      - openwa-api
       - whatsapp-worker
+
+  openwa-api:
+    image: ghcr.io/rmyndharis/openwa:latest
+    environment:
+      NODE_ENV: "development"
+      PORT: "2785"
+      DATABASE_TYPE: "sqlite"
+      DATABASE_NAME: "/app/data/openwa.sqlite"
+      DATABASE_SYNCHRONIZE: "true"
+      ENGINE_TYPE: "whatsapp-web.js"
+      SESSION_DATA_PATH: "/app/data/sessions"
+      PUPPETEER_HEADLESS: "true"
+      PUPPETEER_ARGS: "--no-sandbox,--disable-setuid-sandbox,--disable-dev-shm-usage,--disable-gpu"
+      STORAGE_TYPE: "local"
+      STORAGE_LOCAL_PATH: "/app/data/media"
+      PLUGINS_ENABLED: "true"
+      PLUGINS_DIR: "/app/data/plugins"
+    ports:
+      - "2785:2785"
+    volumes:
+      - openwa_data:/app/data
+    restart: unless-stopped
 
   whatsapp-worker:
     build:
@@ -29,24 +53,17 @@ services:
     env_file:
       - .env.local
     environment:
-      WHATSAPP_WORKER_API_PORT: "3010"
-      WHATSAPP_WORKER_BASE_URL: "http://whatsapp-worker:3010"
-      WHATSAPP_SESSION_DATA_PATH: "/app/workers/whatsapp/sessions"
-      WHATSAPP_CHROME_PATH: "/usr/bin/chromium"
-      WHATSAPP_HEADLESS: "true"
+      OPENWA_API_BASE_URL: "http://openwa-api:2785/api"
+      OPENWA_API_KEY: "dev-admin-key"
       WHATSAPP_LOG_EMPTY_POLLS: "true"
       WHATSAPP_WORKER_INTERVAL_MS: "5000"
       WHATSAPP_RETRY_DELAY_MS: "60000"
       WHATSAPP_MAX_PER_RUN: "20"
-    ports:
-      - "3010:3010"
-    volumes:
-      - whatsapp_sessions:/app/workers/whatsapp/sessions
-      - whatsapp_node_persist:/app/workers/whatsapp/.node-persist
+    depends_on:
+      - openwa-api
     restart: unless-stopped
 
 volumes:
   app_node_modules:
   app_next:
-  whatsapp_sessions:
-  whatsapp_node_persist:
+  openwa_data:

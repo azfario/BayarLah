@@ -9,9 +9,9 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { isDuitNowIdType } from "@/lib/duitnow";
 import { normalizeMalaysianPhone } from "@/lib/friends";
+import { createOpenWaSession, startOpenWaSession } from "@/lib/openwa";
 import { hasProfileDetails } from "@/lib/profile";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { startWorkerSession } from "@/lib/whatsapp-worker";
 
 const PROFILE_PHOTOS_BUCKET = "profile-photos";
 const DUITNOW_QRS_BUCKET = "duitnow-qrs";
@@ -131,7 +131,15 @@ export async function startWhatsAppLink(formData: FormData) {
     redirectToProfile("Save your profile details before linking WhatsApp.", redirectTo);
   }
 
-  const sessionId = user.whatsappSessionId ?? createWhatsAppSessionId(user.id);
+  let sessionId: string;
+
+  try {
+    const session = await createOpenWaSession(createWhatsAppSessionName(user.id));
+    if (!session.id) throw new Error("OpenWA Gateway did not return a session ID.");
+    sessionId = session.id;
+  } catch (error) {
+    redirectToProfile(getErrorMessage(error), redirectTo);
+  }
 
   await prisma.user.update({
     where: { id: user.id },
@@ -146,11 +154,7 @@ export async function startWhatsAppLink(formData: FormData) {
   });
 
   try {
-    await startWorkerSession({
-      userId: user.id,
-      sessionId,
-      expectedPhone: user.phone ?? "",
-    });
+    await startOpenWaSession(sessionId);
   } catch (error) {
     await prisma.user.update({
       where: { id: user.id },
@@ -222,9 +226,9 @@ function getImageExtension(file: File) {
   return (fromName || fromType || "jpg").replace(/[^a-z0-9]/g, "") || "jpg";
 }
 
-function createWhatsAppSessionId(userId: string) {
+function createWhatsAppSessionName(userId: string) {
   const safeUserId = userId.replace(/[^a-zA-Z0-9_-]/g, "");
-  return `bayarlah-${safeUserId}`;
+  return `bayarlah-${safeUserId}-${randomUUID()}`;
 }
 
 function getErrorMessage(error: unknown) {

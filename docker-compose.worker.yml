@@ -1,4 +1,26 @@
 services:
+  openwa-api:
+    image: ghcr.io/rmyndharis/openwa:latest
+    environment:
+      NODE_ENV: "development"
+      PORT: "2785"
+      DATABASE_TYPE: "sqlite"
+      DATABASE_NAME: "/app/data/openwa.sqlite"
+      DATABASE_SYNCHRONIZE: "true"
+      ENGINE_TYPE: "whatsapp-web.js"
+      SESSION_DATA_PATH: "/app/data/sessions"
+      PUPPETEER_HEADLESS: "${OPENWA_HEADLESS:-true}"
+      PUPPETEER_ARGS: "--no-sandbox,--disable-setuid-sandbox,--disable-dev-shm-usage,--disable-gpu"
+      STORAGE_TYPE: "local"
+      STORAGE_LOCAL_PATH: "/app/data/media"
+      PLUGINS_ENABLED: "true"
+      PLUGINS_DIR: "/app/data/plugins"
+    ports:
+      - "${OPENWA_API_PORT:-2785}:2785"
+    volumes:
+      - openwa_data:/app/data
+    restart: unless-stopped
+
   whatsapp-worker:
     build:
       context: .
@@ -7,21 +29,14 @@ services:
     env_file:
       - .env.local
     environment:
-      WHATSAPP_WORKER_API_PORT: "3010"
-      WHATSAPP_WORKER_BASE_URL: "http://localhost:3010"
-      WHATSAPP_SESSION_DATA_PATH: "/app/workers/whatsapp/sessions"
-      WHATSAPP_CHROME_PATH: "/usr/bin/chromium"
-      WHATSAPP_HEADLESS: "${WHATSAPP_HEADLESS:-true}"
+      OPENWA_API_BASE_URL: "http://openwa-api:2785/api"
+      OPENWA_API_KEY: "dev-admin-key"
       WHATSAPP_WORKER_INTERVAL_MS: "${WHATSAPP_WORKER_INTERVAL_MS:-60000}"
       WHATSAPP_RETRY_DELAY_MS: "${WHATSAPP_RETRY_DELAY_MS:-900000}"
       WHATSAPP_MAX_PER_RUN: "${WHATSAPP_MAX_PER_RUN:-20}"
-    ports:
-      - "${WHATSAPP_WORKER_API_PORT:-3010}:3010"
-    volumes:
-      - whatsapp_sessions:/app/workers/whatsapp/sessions
-      - whatsapp_node_persist:/app/workers/whatsapp/.node-persist
+    depends_on:
+      - openwa-api
     restart: unless-stopped
 
 volumes:
-  whatsapp_sessions:
-  whatsapp_node_persist:
+  openwa_data:

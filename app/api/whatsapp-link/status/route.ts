@@ -1,7 +1,17 @@
 import { currentUser } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { ensureUserInDB } from "@/lib/actions/user";
-import { getWorkerSessionStatus } from "@/lib/whatsapp-worker";
+import { prisma } from "@/lib/db";
+import {
+  deleteOpenWaSession,
+  getOpenWaLinkedPhone,
+  getOpenWaQrImageDataUrl,
+  getOpenWaSession,
+  getOpenWaSessionQr,
+  mapOpenWaSessionStatus,
+  openWaPhonesMatch,
+  type WhatsAppGatewaySessionStatus,
+} from "@/lib/openwa";
 
 export const dynamic = "force-dynamic";
 
@@ -25,16 +35,86 @@ export async function GET() {
   }
 
   try {
-    const status = await getWorkerSessionStatus(user.whatsappSessionId);
+    const session = await getOpenWaSession(user.whatsappSessionId);
+    const nextStatus = mapOpenWaSessionStatus(session.status);
+    const linkedPhone = getOpenWaLinkedPhone(session);
+
+    if (nextStatus === "LINKED") {
+      if (!openWaPhonesMatch(user.phone, linkedPhone)) {
+        const errorMessage = `Linked WhatsApp phone ${
+          linkedPhone ?? "unknown"
+        } does not match profile phone ${user.phone ?? "unknown"}.`;
+
+        await deleteOpenWaSession(user.whatsappSessionId).catch(() => undefined);
+        await updateStoredStatus(user.id, user.whatsappSessionId, {
+          status: "FAILED",
+          linkedPhone: null,
+          errorMessage,
+          completed: false,
+        });
+
+        return NextResponse.json({
+          status: "FAILED",
+          sessionId: user.whatsappSessionId,
+          qrImageDataUrl: null,
+          linkedPhone: null,
+          errorMessage,
+          updatedAt: null,
+        } satisfies WhatsAppGatewaySessionStatus);
+      }
+
+      const updatedAt = new Date();
+      await updateStoredStatus(user.id, user.whatsappSessionId, {
+        status: "LINKED",
+        linkedPhone: linkedPhone ?? user.whatsappLinkedPhone,
+        errorMessage: null,
+        completed: true,
+        linkedAt: updatedAt,
+      });
+
+      return NextResponse.json({
+        status: "LINKED",
+        sessionId: user.whatsappSessionId,
+        qrImageDataUrl: null,
+        linkedPhone: linkedPhone ?? user.whatsappLinkedPhone,
+        errorMessage: null,
+        updatedAt: updatedAt.toISOString(),
+      } satisfies WhatsAppGatewaySessionStatus);
+    }
+
+    if (nextStatus === "FAILED" || nextStatus === "NOT_LINKED") {
+      const errorMessage =
+        nextStatus === "FAILED"
+          ? "OpenWA session failed. Start WhatsApp link again."
+          : "OpenWA session is disconnected. Start WhatsApp link again.";
+
+      await updateStoredStatus(user.id, user.whatsappSessionId, {
+        status: nextStatus,
+        linkedPhone: null,
+        errorMessage,
+        completed: false,
+      });
+
+      return NextResponse.json({
+        status: nextStatus,
+        sessionId: user.whatsappSessionId,
+        qrImageDataUrl: null,
+        linkedPhone: null,
+        errorMessage,
+        updatedAt: null,
+      } satisfies WhatsAppGatewaySessionStatus);
+    }
+
+    const qr = await getOpenWaSessionQr(user.whatsappSessionId).catch(() => null);
 
     return NextResponse.json({
-      status: status.status,
+      status: "LINKING",
       sessionId: user.whatsappSessionId,
-      qrImageDataUrl: status.qrImageDataUrl,
-      linkedPhone: status.linkedPhone ?? user.whatsappLinkedPhone,
-      errorMessage: status.errorMessage ?? user.whatsappLinkError,
-      updatedAt: status.updatedAt,
-    });
+      qrImageDataUrl: getOpenWaQrImageDataUrl(qr),
+      linkedPhone: user.whatsappLinkedPhone,
+      errorMessage: user.whatsappLinkError,
+      updatedAt: null,
+    } satisfies WhatsAppGatewaySessionStatus);
   } catch (error) {
     return NextResponse.json({
       status: user.whatsappLinkStatus,
@@ -47,6 +127,29 @@ export async function GET() {
   }
 }
 
+async function updateStoredStatus(
+  userId: string,
+  sessionId: string,
+  input: {
+    status: "NOT_LINKED" | "LINKING" | "LINKED" | "FAILED";
+    linkedPhone: string | null;
+    errorMessage: string | null;
+    completed: boolean;
+    linkedAt?: Date;
+  }
+) {
+  await prisma.user.updateMany({
+    where: { id: userId, whatsappSessionId: sessionId },
+    data: {
+      whatsappLinkStatus: input.status,
+      whatsappLinkedPhone: input.linkedPhone,
+      whatsappLinkedAt: input.linkedAt ?? null,
+      whatsappLinkError: input.errorMessage,
+      profileCompletedAt: input.completed ? (input.linkedAt ?? new Date()) : null,
+    },
+  });
+}
+
 function getErrorMessage(error: unknown) {
-  return error instanceof Error ? error.message : "Unable to reach WhatsApp worker.";
+  return error instanceof Error ? error.message : "Unable to reach OpenWA Gateway.";
 }

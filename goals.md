@@ -34,16 +34,17 @@ Build a Malaysian fintech-focused debt reminder app where friends can record sha
   - Track next reminder date and reminder status.
 
 - [x] WhatsApp notification
-  - Link each collector's WhatsApp Web session through the NovaCloud worker.
+  - Link each collector's WhatsApp Web session through the OpenWA Gateway.
   - Send reminder messages with amount owed and DuitNow QR image.
-  - Start with a demo-friendly adapter, then prepare for official WhatsApp Business API.
+  - Keep WhatsApp Web automation isolated from the Vercel app runtime.
+  - Start with a demo-friendly OpenWA Gateway adapter, then prepare for official WhatsApp Business API.
 
 - [x] Local reminder demo and worker deployment automation
-  - Start the app and WhatsApp worker together with one local demo command.
+  - Start the app, OpenWA Gateway, and reminder poller together with one local demo command.
   - Keep the Vercel app non-Dockerized.
-  - Package only the NovaCloud OpenWA worker with Docker and persistent sessions.
-  - Support full local Docker demo with app plus worker containers.
-  - Support NovaCloud worker deployment behind an HTTPS reverse proxy.
+  - Package the NovaCloud OpenWA Gateway plus lightweight reminder poller with Docker and persistent sessions.
+  - Support full local Docker demo with app, OpenWA Gateway, and poller containers.
+  - Support NovaCloud OpenWA Gateway deployment behind an HTTPS reverse proxy.
 
 - [ ] Dashboard polish
   - Show debts owed, debts receivable, recent expenses, and reminder status.
