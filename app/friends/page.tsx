@@ -2,6 +2,7 @@ import Link from "next/link";
 import { UserButton } from "@clerk/nextjs";
 import { currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
+import StatusToast from "@/components/StatusToast";
 import SubmitButton from "@/components/SubmitButton";
 import { createFriend, deleteFriend } from "@/lib/actions/friends";
 import { ensureUserInDB } from "@/lib/actions/user";
@@ -51,17 +52,7 @@ export default async function FriendsPage({ searchParams }: FriendsPageProps) {
           </div>
         </header>
 
-        {params.error ? (
-          <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-            {params.error}
-          </div>
-        ) : null}
-
-        {params.success ? (
-          <div className="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-            {params.success}
-          </div>
-        ) : null}
+        <StatusToast error={params.error} success={params.success} />
 
         <section className="rounded-lg border border-zinc-200 bg-white p-6 shadow-sm">
           <h2 className="text-xl font-semibold">Add friend</h2>

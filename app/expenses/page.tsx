@@ -4,6 +4,7 @@ import { UserButton } from "@clerk/nextjs";
 import { currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import ExpenseCreateTabs from "@/app/expenses/ExpenseCreateTabs";
+import StatusToast from "@/components/StatusToast";
 import SubmitButton from "@/components/SubmitButton";
 import {
   deleteExpense,
@@ -110,17 +111,7 @@ export default async function ExpensesPage({ searchParams }: ExpensesPageProps) 
           </div>
         </header>
 
-        {params.error ? (
-          <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-            {params.error}
-          </div>
-        ) : null}
-
-        {params.success ? (
-          <div className="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-            {params.success}
-          </div>
-        ) : null}
+        <StatusToast error={params.error} success={params.success} />
 
         <ExpenseCreateTabs
           friends={friends}

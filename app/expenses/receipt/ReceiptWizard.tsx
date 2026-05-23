@@ -407,7 +407,7 @@ export default function ReceiptWizard({
             </span>
           </label>
 
-          <div className="flex items-end">
+          <div className="flex items-start md:pt-7">
             <button
               type="submit"
               disabled={isParsing}

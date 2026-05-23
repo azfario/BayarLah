@@ -5,6 +5,7 @@ import { saveProfile } from "@/lib/actions/profile";
 import { ensureUserInDB } from "@/lib/actions/user";
 import { DUITNOW_ID_TYPES } from "@/lib/duitnow";
 import { hasProfileDetails, isProfileComplete } from "@/lib/profile";
+import StatusToast from "@/components/StatusToast";
 import SubmitButton from "@/components/SubmitButton";
 import WhatsAppLinkPanel from "@/components/WhatsAppLinkPanel";
 
@@ -41,17 +42,7 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
           <UserButton afterSignOutUrl="/" />
         </header>
 
-        {params.error ? (
-          <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-            {params.error}
-          </div>
-        ) : null}
-
-        {params.success ? (
-          <div className="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-            {params.success}
-          </div>
-        ) : null}
+        <StatusToast error={params.error} success={params.success} />
 
         <form
           action={saveProfile}
