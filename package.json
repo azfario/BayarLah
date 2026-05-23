@@ -9,6 +9,9 @@
     "build": "next build --turbopack",
     "start": "next start",
     "lint": "eslint",
+    "docker:demo": "docker compose -f docker-compose.demo.yml up --build",
+    "docker:worker": "docker compose -f docker-compose.worker.yml up --build",
+    "docker:novacloud": "docker compose -f docker-compose.novacloud.yml up -d --build",
     "whatsapp:worker": "npm --prefix workers/whatsapp run start"
   },
   "dependencies": {

@@ -54,9 +54,10 @@ The current product flow is:
   - active reminder state with next reminder date
 - WhatsApp notification demo path:
   - one-command local reminder demo via `npm run dev:demo`
+  - full local Docker demo via `docker compose -f docker-compose.demo.yml up --build`
   - Vercel-safe "Send now" queueing on recent expense shares
   - NovaCloud-only OpenWA worker command
-  - Dockerized NovaCloud worker option with persistent session volumes
+  - Dockerized NovaCloud worker option with persistent session volumes and Caddy HTTPS
   - per-user WhatsApp Web session linking during profile onboarding
   - reminder attempt logging with sent/failed state
   - worker sends the collector's DuitNow QR image with the reminder message
@@ -112,15 +113,18 @@ Important variables:
 - `WHATSAPP_WORKER_API_PORT`
 - `WHATSAPP_SESSION_DATA_PATH`
 - `WHATSAPP_CHROME_PATH`
+- `WORKER_DOMAIN` for NovaCloud Caddy only
 
 Notes:
 
 - Do not commit actual `.env` or `.env.local` values.
+- Do not commit `.env.novacloud`; use `.env.novacloud.example` as the VM template.
 - Receipt photos are temporary and should not be persisted.
 - Profile photos and DuitNow QR images are stored in public Supabase Storage buckets.
 - Use `npm run dev:demo` for local end-to-end reminder testing. It starts the app and worker together from `.env.local`.
+- Use `docker compose -f docker-compose.demo.yml up --build` for the most reliable local WhatsApp test on Windows because OpenWA then runs on Linux/Node 20/Chromium.
 - The app is intended for Vercel deployment and mobile-first use.
-- Docker is intended only for the NovaCloud OpenWA worker, not the Vercel app.
+- Docker is intended for the NovaCloud OpenWA worker and optional local full-demo testing, not for Vercel production.
 
 ## Verification Commands
 
@@ -132,6 +136,8 @@ npx.cmd prisma generate
 npm.cmd run lint
 npm.cmd run build
 node --check scripts/dev-demo.mjs
+docker compose -f docker-compose.demo.yml config
+docker compose -f docker-compose.worker.yml config
 ```
 
 Known verification status from the current build:

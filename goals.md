@@ -42,6 +42,8 @@ Build a Malaysian fintech-focused debt reminder app where friends can record sha
   - Start the app and WhatsApp worker together with one local demo command.
   - Keep the Vercel app non-Dockerized.
   - Package only the NovaCloud OpenWA worker with Docker and persistent sessions.
+  - Support full local Docker demo with app plus worker containers.
+  - Support NovaCloud worker deployment behind an HTTPS reverse proxy.
 
 - [ ] Dashboard polish
   - Show debts owed, debts receivable, recent expenses, and reminder status.

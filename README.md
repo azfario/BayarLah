@@ -138,6 +138,9 @@ When the user saves, BayarLah stores the final expense, receipt item history, an
 ```bash
 npm run dev
 npm run dev:demo
+npm run docker:demo
+npm run docker:worker
+npm run docker:novacloud
 npm run build
 npm run lint
 npm run whatsapp:worker
@@ -151,19 +154,47 @@ Use `npm run dev:demo` when testing the full reminder flow locally:
 4. Create an expense with a real recipient phone.
 5. Click **Send now** and confirm the worker logs a `SENT` attempt.
 
+Use Docker for the most reliable local WhatsApp test, especially on Windows:
+
+```bash
+docker compose -f docker-compose.demo.yml up --build
+```
+
+or through npm:
+
+```bash
+npm run docker:demo
+```
+
+This starts the app at [http://localhost:3000](http://localhost:3000) and the OpenWA worker at [http://localhost:3010](http://localhost:3010). The worker runs in Linux with Node 20 and Chromium, and WhatsApp Web session files persist in Docker volumes.
+
 ## WhatsApp Worker Deployment
 
 The Next.js app can stay on Vercel. Do not install or import OpenWA in the Vercel runtime path.
 
-The Next.js app stays Vercel-native. Docker is only for the NovaCloud OpenWA worker.
+The Next.js app stays Vercel-native in production. Docker is for the NovaCloud OpenWA worker and the optional local full-demo setup.
 
-For a Dockerized worker on NovaCloud or local testing:
+For local Docker worker-only testing:
 
 ```bash
 docker compose -f docker-compose.worker.yml up --build
+npm run dev
 ```
 
-The compose setup builds `workers/whatsapp/Dockerfile`, installs Chromium, exposes the worker API on port `3010`, and stores WhatsApp Web sessions in persistent Docker volumes.
+For NovaCloud deployment, copy `.env.novacloud.example` to `.env.novacloud`, set `WORKER_DOMAIN`, database URLs, and `WHATSAPP_WORKER_API_TOKEN`, then run:
+
+```bash
+docker compose -f docker-compose.novacloud.yml up -d --build
+```
+
+The NovaCloud compose setup builds `workers/whatsapp/Dockerfile`, installs Chromium, runs OpenWA on the private Docker network, exposes only Caddy on ports `80/443`, and stores WhatsApp Web sessions in persistent Docker volumes.
+
+Set these Vercel environment variables to connect the app to NovaCloud:
+
+```bash
+WHATSAPP_WORKER_BASE_URL=https://your-worker-domain
+WHATSAPP_WORKER_API_TOKEN=same-secret-as-novacloud
+```
 
 For a non-Docker VM setup, install the root app dependencies, generate Prisma, then install the worker package:
 

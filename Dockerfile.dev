@@ -1,0 +1,22 @@
+FROM node:20-bookworm-slim
+
+ENV NEXT_TELEMETRY_DISABLED=1
+
+WORKDIR /app
+
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends ca-certificates \
+  && rm -rf /var/lib/apt/lists/*
+
+COPY package.json package-lock.json ./
+COPY prisma ./prisma
+
+ENV DATABASE_URL=postgresql://postgres:postgres@localhost:5432/postgres \
+    DIRECT_URL=postgresql://postgres:postgres@localhost:5432/postgres
+
+RUN npm ci --legacy-peer-deps \
+  && npx prisma generate
+
+EXPOSE 3000
+
+CMD ["npm", "run", "dev", "--", "--hostname", "0.0.0.0"]

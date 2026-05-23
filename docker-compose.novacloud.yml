@@ -1,0 +1,40 @@
+services:
+  whatsapp-worker:
+    build:
+      context: .
+      dockerfile: workers/whatsapp/Dockerfile
+    image: bayarlah-whatsapp-worker:novacloud
+    env_file:
+      - .env.novacloud
+    environment:
+      WHATSAPP_WORKER_API_PORT: "3010"
+      WHATSAPP_SESSION_DATA_PATH: "/app/workers/whatsapp/sessions"
+      WHATSAPP_CHROME_PATH: "/usr/bin/chromium"
+      WHATSAPP_HEADLESS: "true"
+    expose:
+      - "3010"
+    volumes:
+      - whatsapp_sessions:/app/workers/whatsapp/sessions
+      - whatsapp_node_persist:/app/workers/whatsapp/.node-persist
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2-alpine
+    env_file:
+      - .env.novacloud
+    depends_on:
+      - whatsapp-worker
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    restart: unless-stopped
+
+volumes:
+  whatsapp_sessions:
+  whatsapp_node_persist:
+  caddy_data:
+  caddy_config:
