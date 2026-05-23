@@ -1,4 +1,4 @@
-import { PrismaClient, type Prisma } from "@prisma/client";
+import { Prisma, PrismaClient } from "@prisma/client";
 import { formatMoney } from "../../lib/money.js";
 import {
   getOpenWaLinkedPhone,
@@ -74,15 +74,25 @@ async function main() {
 
 async function processDueReminders() {
   const now = new Date();
+  const dueShareRows = await prisma.$queryRaw<{ id: string }[]>`
+    SELECT "id"
+    FROM "ExpenseShare"
+    WHERE "paidAt" IS NULL
+      AND "reminderStatus" = 'ACTIVE'::"ReminderStatus"
+      AND "nextReminderAt" <= ${now}
+      AND "reminderFrequencyValue" IS NOT NULL
+      AND "reminderFrequencyUnit" IS NOT NULL
+    ORDER BY "nextReminderAt" ASC
+    LIMIT ${maxPerRun}
+  `;
+  const dueShareIds = dueShareRows.map((share) => share.id);
+
+  if (dueShareIds.length === 0) return 0;
+
   const dueShares = await prisma.expenseShare.findMany({
     where: {
-      reminderStatus: "ACTIVE",
-      nextReminderAt: { lte: now },
-      reminderFrequencyValue: { not: null },
-      reminderFrequencyUnit: { not: null },
+      id: { in: dueShareIds },
     },
-    orderBy: { nextReminderAt: "asc" },
-    take: maxPerRun,
     include: {
       friend: {
         select: { name: true, phone: true },
@@ -106,8 +116,11 @@ async function processDueReminders() {
       },
     },
   });
+  const dueShareById = new Map(dueShares.map((share) => [share.id, share]));
 
-  for (const share of dueShares) {
+  for (const { id } of dueShareRows) {
+    const share = dueShareById.get(id);
+    if (!share) continue;
     await sendReminder(share);
   }
 

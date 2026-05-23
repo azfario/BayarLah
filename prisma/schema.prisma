@@ -117,6 +117,7 @@ model ExpenseShare {
   friendId                 String
   friend                   Friend                    @relation(fields: [friendId], references: [id])
   owedAmount               Decimal                   @db.Decimal(10, 2)
+  paidAt                   DateTime?
   reminderFrequencyValue   Int?
   reminderFrequencyUnit    ReminderFrequencyUnit?
   reminderStatus           ReminderStatus            @default(NOT_SCHEDULED)

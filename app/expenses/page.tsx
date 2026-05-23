@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Prisma } from "@prisma/client";
 import { UserButton } from "@clerk/nextjs";
 import { currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
@@ -6,6 +7,8 @@ import ExpenseCreateTabs from "@/app/expenses/ExpenseCreateTabs";
 import SubmitButton from "@/components/SubmitButton";
 import {
   deleteExpense,
+  markExpenseSharePaid,
+  markExpenseShareUnpaid,
   queueExpenseShareReminderNow,
 } from "@/lib/actions/expenses";
 import { ensureUserInDB } from "@/lib/actions/user";
@@ -22,6 +25,11 @@ type ExpensesPageProps = {
     mode?: string;
     success?: string;
   }>;
+};
+
+type SharePaymentStatus = {
+  id: string;
+  paidAt: Date | null;
 };
 
 export default async function ExpensesPage({ searchParams }: ExpensesPageProps) {
@@ -68,6 +76,20 @@ export default async function ExpensesPage({ searchParams }: ExpensesPageProps) 
       where: { collectorId: user.id },
     }),
   ]);
+  const shareIds = expenses.flatMap((expense) =>
+    expense.shares.map((share) => share.id)
+  );
+  const sharePaymentStatuses =
+    shareIds.length > 0
+      ? await prisma.$queryRaw<SharePaymentStatus[]>(Prisma.sql`
+          SELECT "id", "paidAt"
+          FROM "ExpenseShare"
+          WHERE "id" IN (${Prisma.join(shareIds)})
+        `)
+      : [];
+  const paidAtByShareId = new Map(
+    sharePaymentStatuses.map((status) => [status.id, status.paidAt])
+  );
 
   return (
     <main className="min-h-screen bg-zinc-50 px-4 py-8 text-zinc-950">
@@ -146,6 +168,8 @@ export default async function ExpensesPage({ searchParams }: ExpensesPageProps) 
                   <div className="mt-3 grid gap-2 md:grid-cols-2">
                     {expense.shares.map((share) => {
                       const latestAttempt = share.whatsappReminderAttempts[0];
+                      const paidAt = paidAtByShareId.get(share.id) ?? null;
+                      const isPaid = Boolean(paidAt);
 
                       return (
                         <div
@@ -153,8 +177,21 @@ export default async function ExpensesPage({ searchParams }: ExpensesPageProps) 
                           className="flex items-start justify-between gap-3 rounded-md bg-zinc-50 px-3 py-2 text-sm"
                         >
                           <div>
-                            {share.friend.name}{" "}
-                            <span className="text-zinc-500">({share.friend.phone})</span>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span>
+                                {share.friend.name}{" "}
+                                <span className="text-zinc-500">({share.friend.phone})</span>
+                              </span>
+                              <span
+                                className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                                  isPaid
+                                    ? "bg-emerald-100 text-emerald-700"
+                                    : "bg-amber-100 text-amber-700"
+                                }`}
+                              >
+                                {isPaid ? "Paid" : "Unpaid"}
+                              </span>
+                            </div>
                             {latestAttempt ? (
                               <span className="mt-1 block text-xs text-zinc-500">
                                 {getWhatsAppAttemptLabel(latestAttempt)}
@@ -167,10 +204,12 @@ export default async function ExpensesPage({ searchParams }: ExpensesPageProps) 
                                 {formatMoney(share.owedAmount)}
                               </span>
                               <span className="block text-xs text-zinc-500">
-                                {getReminderStatusLabel(share)}
+                                {paidAt
+                                  ? `Paid ${sharePaidDateFormatter.format(paidAt)}`
+                                  : getReminderStatusLabel(share)}
                               </span>
                             </span>
-                            {share.reminderStatus === "ACTIVE" ? (
+                            {!isPaid && share.reminderStatus === "ACTIVE" ? (
                               <form action={queueExpenseShareReminderNow}>
                                 <input type="hidden" name="shareId" value={share.id} />
                                 <SubmitButton
@@ -182,6 +221,20 @@ export default async function ExpensesPage({ searchParams }: ExpensesPageProps) 
                                 </SubmitButton>
                               </form>
                             ) : null}
+                            <form
+                              action={
+                                isPaid ? markExpenseShareUnpaid : markExpenseSharePaid
+                              }
+                            >
+                              <input type="hidden" name="shareId" value={share.id} />
+                              <SubmitButton
+                                variant="secondary"
+                                pendingLabel={isPaid ? "Marking..." : "Settling..."}
+                                className="px-3 py-1 text-xs"
+                              >
+                                {isPaid ? "Mark unpaid" : "Mark paid"}
+                              </SubmitButton>
+                            </form>
                           </div>
                         </div>
                       );
@@ -242,6 +295,14 @@ export default async function ExpensesPage({ searchParams }: ExpensesPageProps) 
 }
 
 const whatsappAttemptDateFormatter = new Intl.DateTimeFormat("en-MY", {
+  timeZone: "Asia/Kuala_Lumpur",
+  day: "numeric",
+  month: "short",
+  hour: "numeric",
+  minute: "2-digit",
+});
+
+const sharePaidDateFormatter = new Intl.DateTimeFormat("en-MY", {
   timeZone: "Asia/Kuala_Lumpur",
   day: "numeric",
   month: "short",

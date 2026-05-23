@@ -1,6 +1,6 @@
 "use server";
 
-import type { ExpenseSplitMode } from "@prisma/client";
+import { Prisma, type ExpenseSplitMode } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
@@ -11,6 +11,7 @@ import {
 } from "@/lib/money";
 import { isProfileComplete } from "@/lib/profile";
 import { parseReminderScheduleFromFormData } from "@/lib/reminders";
+import { getNextReminderAtFromCadence } from "@/lib/whatsapp";
 import { ensureUserInDB } from "@/lib/actions/user";
 
 type InlineFriendInput = {
@@ -189,6 +190,10 @@ export async function queueExpenseShareReminderNow(formData: FormData) {
     redirectWithMessage("/expenses", "Reminder share not found.");
   }
 
+  if (await getExpenseSharePaidAt(share.id)) {
+    redirectWithMessage("/expenses", "This share is already marked paid.");
+  }
+
   if (
     share.reminderStatus !== "ACTIVE" ||
     !share.reminderFrequencyValue ||
@@ -204,6 +209,99 @@ export async function queueExpenseShareReminderNow(formData: FormData) {
 
   revalidatePath("/expenses");
   redirect("/expenses?success=Reminder queued for WhatsApp worker.");
+}
+
+export async function markExpenseSharePaid(formData: FormData) {
+  const user = await ensureUserInDB();
+  if (!isProfileComplete(user)) redirect("/profile?next=/expenses");
+
+  const shareId = getString(formData.get("shareId"));
+  if (!shareId) {
+    redirectWithMessage("/expenses", "Expense share not found.");
+  }
+
+  const paidAt = new Date();
+  const result = await prisma.$executeRaw`
+    UPDATE "ExpenseShare" AS es
+    SET
+      "paidAt" = ${paidAt},
+      "reminderStatus" = 'PAUSED'::"ReminderStatus",
+      "nextReminderAt" = NULL,
+      "updatedAt" = ${paidAt}
+    FROM "Expense" AS e
+    WHERE es."id" = ${shareId}
+      AND es."expenseId" = e."id"
+      AND e."collectorId" = ${user.id}
+  `;
+
+  if (result === 0) {
+    redirectWithMessage("/expenses", "Expense share not found.");
+  }
+
+  revalidatePath("/expenses");
+  redirect("/expenses?success=Friend marked paid.");
+}
+
+export async function markExpenseShareUnpaid(formData: FormData) {
+  const user = await ensureUserInDB();
+  if (!isProfileComplete(user)) redirect("/profile?next=/expenses");
+
+  const shareId = getString(formData.get("shareId"));
+  if (!shareId) {
+    redirectWithMessage("/expenses", "Expense share not found.");
+  }
+
+  const share = await prisma.expenseShare.findFirst({
+    where: {
+      id: shareId,
+      expense: { collectorId: user.id },
+    },
+    select: {
+      id: true,
+      reminderFrequencyValue: true,
+      reminderFrequencyUnit: true,
+    },
+  });
+
+  if (!share) {
+    redirectWithMessage("/expenses", "Expense share not found.");
+  }
+
+  const now = new Date();
+  const hasReminderCadence =
+    Boolean(share.reminderFrequencyValue) && Boolean(share.reminderFrequencyUnit);
+  const reminderStatus = hasReminderCadence
+    ? Prisma.sql`'ACTIVE'::"ReminderStatus"`
+    : Prisma.sql`'NOT_SCHEDULED'::"ReminderStatus"`;
+  const nextReminderAt =
+    hasReminderCadence && share.reminderFrequencyValue && share.reminderFrequencyUnit
+      ? getNextReminderAtFromCadence(
+          share.reminderFrequencyValue,
+          share.reminderFrequencyUnit,
+          now
+        )
+      : null;
+
+  await prisma.$executeRaw`
+    UPDATE "ExpenseShare"
+    SET
+      "paidAt" = NULL,
+      "reminderStatus" = ${reminderStatus},
+      "nextReminderAt" = ${nextReminderAt},
+      "updatedAt" = ${now}
+    WHERE "id" = ${share.id}
+  `;
+
+  revalidatePath("/expenses");
+  redirect("/expenses?success=Friend marked unpaid.");
+}
+
+async function getExpenseSharePaidAt(shareId: string) {
+  const rows = await prisma.$queryRaw<{ paidAt: Date | null }[]>`
+    SELECT "paidAt" FROM "ExpenseShare" WHERE "id" = ${shareId} LIMIT 1
+  `;
+
+  return rows[0]?.paidAt ?? null;
 }
 
 function getShareAmounts(

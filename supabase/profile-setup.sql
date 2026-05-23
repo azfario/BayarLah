@@ -181,6 +181,7 @@ ALTER TABLE "ExpenseShare" ADD COLUMN IF NOT EXISTS "reminderFrequencyUnit" "Rem
 ALTER TABLE "ExpenseShare" ADD COLUMN IF NOT EXISTS "reminderStatus" "ReminderStatus" NOT NULL DEFAULT 'NOT_SCHEDULED';
 ALTER TABLE "ExpenseShare" ADD COLUMN IF NOT EXISTS "nextReminderAt" TIMESTAMP(3);
 ALTER TABLE "ExpenseShare" ADD COLUMN IF NOT EXISTS "lastReminderAt" TIMESTAMP(3);
+ALTER TABLE "ExpenseShare" ADD COLUMN IF NOT EXISTS "paidAt" TIMESTAMP(3);
 ALTER TABLE "ExpenseShare" ALTER COLUMN "reminderStatus" SET DEFAULT 'NOT_SCHEDULED';
 UPDATE "ExpenseShare"
 SET "reminderStatus" = 'NOT_SCHEDULED'
