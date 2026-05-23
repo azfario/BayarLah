@@ -8,6 +8,7 @@ Build a Malaysian fintech-focused debt reminder app where friends can record sha
 
 - [x] User profile onboarding
   - Collect full name, phone number, Clerk email, optional profile photo, DuitNow ID type/value, and mandatory DuitNow QR image.
+  - Require WhatsApp Web linking during onboarding.
   - Require profile completion before dashboard access.
   - Allow users to edit their profile later.
   - Store profile images and DuitNow QR images in public Supabase Storage buckets.
@@ -28,11 +29,12 @@ Build a Malaysian fintech-focused debt reminder app where friends can record sha
   - Assign item amounts manually across the collector and friends.
   - Store item history and final custom expense shares without storing the receipt photo.
 
-- [ ] Reminder scheduling
+- [x] Reminder scheduling
   - Let users choose reminder frequency for unpaid debts.
   - Track next reminder date and reminder status.
 
-- [ ] WhatsApp notification
+- [x] WhatsApp notification
+  - Link each collector's WhatsApp Web session through the NovaCloud worker.
   - Send reminder messages with amount owed and DuitNow QR image.
   - Start with a demo-friendly adapter, then prepare for official WhatsApp Business API.
 
