@@ -6,10 +6,10 @@ import {
   deleteOpenWaSession,
   getOpenWaLinkedPhone,
   getOpenWaQrImageDataUrl,
-  getOpenWaSession,
   getOpenWaSessionQr,
   mapOpenWaSessionStatus,
   openWaPhonesMatch,
+  recoverOpenWaSession,
   type WhatsAppGatewaySessionStatus,
 } from "@/lib/openwa";
 
@@ -35,7 +35,7 @@ export async function GET() {
   }
 
   try {
-    const session = await getOpenWaSession(user.whatsappSessionId);
+    const session = await recoverOpenWaSession(user.whatsappSessionId);
     const nextStatus = mapOpenWaSessionStatus(session.status);
     const linkedPhone = getOpenWaLinkedPhone(session);
 

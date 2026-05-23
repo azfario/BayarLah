@@ -228,7 +228,9 @@ function getImageExtension(file: File) {
 
 function createWhatsAppSessionName(userId: string) {
   const safeUserId = userId.replace(/[^a-zA-Z0-9_-]/g, "");
-  return `bayarlah-${safeUserId}-${randomUUID()}`;
+  const shortUserId = safeUserId.slice(-12) || "user";
+  const nonce = randomUUID().replace(/-/g, "").slice(0, 16);
+  return `bl-${shortUserId}-${nonce}`;
 }
 
 function getErrorMessage(error: unknown) {

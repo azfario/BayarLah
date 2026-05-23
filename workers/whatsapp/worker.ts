@@ -1,8 +1,10 @@
 import { PrismaClient, type Prisma } from "@prisma/client";
 import { formatMoney } from "../../lib/money.js";
 import {
+  getOpenWaLinkedPhone,
   isOpenWaSessionConnected,
-  getOpenWaSession,
+  openWaPhonesMatch,
+  recoverOpenWaSession,
   sendOpenWaImage,
 } from "../../lib/openwa.js";
 import {
@@ -141,17 +143,30 @@ async function sendReminder(share: DueShare) {
       throw new Error("Collector DuitNow QR is missing.");
     }
 
-    if (collector.whatsappLinkStatus !== "LINKED" || !collector.whatsappSessionId) {
+    if (!collector.whatsappSessionId) {
       throw new Error("Collector WhatsApp is not linked.");
     }
 
-    const session = await getOpenWaSession(collector.whatsappSessionId);
+    const session = await recoverOpenWaSession(collector.whatsappSessionId);
     if (!isOpenWaSessionConnected(session)) {
-      await markCollectorSessionNotLinked(
-        collector.id,
-        collector.whatsappSessionId
-      );
       throw new Error("Collector OpenWA session is not connected.");
+    }
+
+    const linkedPhone = getOpenWaLinkedPhone(session);
+    if (!openWaPhonesMatch(collector.phone, linkedPhone)) {
+      throw new Error(
+        `Linked WhatsApp phone ${
+          linkedPhone ?? "unknown"
+        } does not match collector phone ${collector.phone ?? "unknown"}.`
+      );
+    }
+
+    if (collector.whatsappLinkStatus !== "LINKED") {
+      await markCollectorSessionLinked(
+        collector.id,
+        collector.whatsappSessionId,
+        linkedPhone
+      );
     }
 
     const providerResult = await sendOpenWaImage({
@@ -193,14 +208,21 @@ async function sendReminder(share: DueShare) {
   }
 }
 
-async function markCollectorSessionNotLinked(userId: string, sessionId: string) {
+async function markCollectorSessionLinked(
+  userId: string,
+  sessionId: string,
+  linkedPhone: string | null
+) {
+  const linkedAt = new Date();
+
   await prisma.user.updateMany({
     where: { id: userId, whatsappSessionId: sessionId },
     data: {
-      whatsappLinkStatus: "NOT_LINKED",
-      whatsappLinkedAt: null,
-      whatsappLinkError: "OpenWA session is not connected.",
-      profileCompletedAt: null,
+      whatsappLinkStatus: "LINKED",
+      whatsappLinkedPhone: linkedPhone,
+      whatsappLinkedAt: linkedAt,
+      whatsappLinkError: null,
+      profileCompletedAt: linkedAt,
     },
   });
 }

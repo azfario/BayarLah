@@ -10,6 +10,7 @@ export type OpenWaSession = {
   id: string;
   name?: string | null;
   status?: string | null;
+  phone?: string | null;
   phoneNumber?: string | null;
   pushName?: string | null;
   connectedAt?: string | null;
@@ -20,6 +21,7 @@ export type OpenWaQr = {
   code?: string | null;
   image?: string | null;
   qr?: string | null;
+  qrCode?: string | null;
   qrImage?: string | null;
   qrImageDataUrl?: string | null;
 };
@@ -83,6 +85,19 @@ export async function startOpenWaSession(sessionId: string) {
   );
 }
 
+export async function recoverOpenWaSession(sessionId: string) {
+  let session = await getOpenWaSession(sessionId);
+  if (isOpenWaSessionConnected(session)) return session;
+
+  if (mapOpenWaSessionStatus(session.status) === "NOT_LINKED") {
+    await startOpenWaSession(sessionId).catch(() => undefined);
+    await sleep(2_000);
+    session = await getOpenWaSession(sessionId);
+  }
+
+  return session;
+}
+
 export async function getOpenWaSession(sessionId: string) {
   return requestOpenWa<OpenWaSession>(
     `/sessions/${encodeURIComponent(sessionId)}`,
@@ -116,7 +131,7 @@ export async function sendOpenWaImage(input: {
       method: "POST",
       body: {
         chatId: input.chatId,
-        image: { url: input.imageUrl },
+        url: input.imageUrl,
         caption: input.caption,
       },
     }
@@ -143,7 +158,13 @@ export function mapOpenWaSessionStatus(status: string | null | undefined) {
 export function getOpenWaQrImageDataUrl(qr: OpenWaQr | null) {
   if (!qr) return null;
 
-  for (const candidate of [qr.image, qr.qrImage, qr.qrImageDataUrl, qr.qr]) {
+  for (const candidate of [
+    qr.image,
+    qr.qrCode,
+    qr.qrImage,
+    qr.qrImageDataUrl,
+    qr.qr,
+  ]) {
     if (typeof candidate !== "string" || !candidate) continue;
     if (candidate.startsWith("data:image/")) return candidate;
     if (looksLikeBase64Image(candidate)) return `data:image/png;base64,${candidate}`;
@@ -151,6 +172,7 @@ export function getOpenWaQrImageDataUrl(qr: OpenWaQr | null) {
 
   for (const candidate of [
     qr.image,
+    qr.qrCode,
     qr.qrImage,
     qr.qrImageDataUrl,
     qr.qr,
@@ -165,7 +187,7 @@ export function getOpenWaQrImageDataUrl(qr: OpenWaQr | null) {
 }
 
 export function getOpenWaLinkedPhone(session: OpenWaSession | null) {
-  const digits = getDigits(session?.phoneNumber ?? "");
+  const digits = getDigits(session?.phoneNumber ?? session?.phone ?? "");
   return digits ? `+${digits}` : null;
 }
 
@@ -178,7 +200,7 @@ export function openWaPhonesMatch(expectedPhone: string | null, linkedPhone: str
 }
 
 export function isOpenWaSessionConnected(session: OpenWaSession | null) {
-  return (session?.status ?? "").toUpperCase() === "CONNECTED";
+  return mapOpenWaSessionStatus(session?.status) === "LINKED";
 }
 
 async function requestOpenWa<T>(path: string, options: RequestOpenWaOptions) {
@@ -291,4 +313,8 @@ function readOptionalFile(path: string | undefined) {
   } catch {
     return "";
   }
+}
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
