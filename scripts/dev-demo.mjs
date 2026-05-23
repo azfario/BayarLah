@@ -23,6 +23,7 @@ applyDefault(env, "WHATSAPP_RETRY_DELAY_MS", "60000");
 applyDefault(env, "WHATSAPP_MAX_PER_RUN", "20");
 applyDefault(env, "FORCE_COLOR", "1");
 
+await applyDatabaseSetup(env);
 printBanner(env);
 
 const children = [
@@ -85,6 +86,82 @@ function stripInlineComment(value) {
 
 function applyDefault(target, key, value) {
   if (!target[key]) target[key] = value;
+}
+
+async function applyDatabaseSetup(currentEnv) {
+  if (currentEnv.BAYARLAH_SKIP_DB_SETUP === "true") {
+    console.log("Skipping database setup because BAYARLAH_SKIP_DB_SETUP=true.");
+    return;
+  }
+
+  const databaseUrl = currentEnv.DATABASE_URL || currentEnv.DIRECT_URL;
+  if (!databaseUrl) {
+    console.log(
+      "Warning: DATABASE_URL was not found. Skipping database setup."
+    );
+    return;
+  }
+
+  const setupEnv = {
+    ...currentEnv,
+    DATABASE_URL: databaseUrl,
+    DIRECT_URL: currentEnv.DIRECT_URL || databaseUrl,
+  };
+  const setupFile = path.join(rootDir, "supabase", "profile-setup.sql");
+  const schemaFile = path.join(rootDir, "prisma", "schema.prisma");
+
+  console.log("");
+  console.log("Applying Supabase schema setup...");
+
+  const result = await runCommand(
+    "db",
+    npmCommand,
+    [
+      "exec",
+      "--",
+      "prisma",
+      "db",
+      "execute",
+      "--file",
+      setupFile,
+      "--schema",
+      schemaFile,
+    ],
+    setupEnv
+  );
+
+  if (result.code === 0) {
+    console.log("Database schema is ready.");
+    return;
+  }
+
+  console.error("");
+  console.error("Database setup failed, so the demo was not started.");
+  console.error(
+    "Run supabase/profile-setup.sql in the Supabase SQL editor, then try npm run dev:demo again."
+  );
+  process.exit(result.code || 1);
+}
+
+function runCommand(name, command, args, commandEnv) {
+  return new Promise((resolve) => {
+    const { spawnCommand, spawnArgs } = getSpawnConfig(command, args);
+    const child = spawn(spawnCommand, spawnArgs, {
+      cwd: rootDir,
+      env: commandEnv,
+      shell: false,
+      windowsHide: true,
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+
+    child.stdout.on("data", (chunk) => prefixOutput(name, chunk));
+    child.stderr.on("data", (chunk) => prefixOutput(name, chunk));
+    child.on("error", (error) => {
+      console.error(`[${name}] ${error.message}`);
+      resolve({ code: 1 });
+    });
+    child.on("exit", (code) => resolve({ code: code ?? 0 }));
+  });
 }
 
 function printBanner(currentEnv) {

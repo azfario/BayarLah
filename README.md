@@ -83,6 +83,8 @@ npm run dev:demo
 
 This loads `.env.local`, starts the Next.js app, starts the OpenWA Gateway plus reminder poller through Docker Compose, applies local demo defaults, and stops the processes on `Ctrl+C`.
 
+Before the app and worker start, the demo launcher runs the idempotent Supabase setup in `supabase/profile-setup.sql`. This keeps local laptops from starting the WhatsApp worker against an older database schema.
+
 ## Environment Variables
 
 | Variable | Purpose |
@@ -114,6 +116,8 @@ For Supabase SQL setup, use the scripts in `supabase/`:
 - friends
 - expenses and expense shares
 - receipt item history and receipt item allocations
+
+If the WhatsApp worker logs `column "paidAt" does not exist`, the connected Supabase database is behind the repo schema. Run `supabase/profile-setup.sql` in the Supabase SQL editor, or rerun `npm run dev:demo` so the launcher can apply the setup automatically.
 
 After changing the Prisma schema, run:
 
