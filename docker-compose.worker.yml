@@ -1,0 +1,27 @@
+services:
+  whatsapp-worker:
+    build:
+      context: .
+      dockerfile: workers/whatsapp/Dockerfile
+    image: bayarlah-whatsapp-worker:local
+    env_file:
+      - .env.local
+    environment:
+      WHATSAPP_WORKER_API_PORT: "3010"
+      WHATSAPP_WORKER_BASE_URL: "http://localhost:3010"
+      WHATSAPP_SESSION_DATA_PATH: "/app/workers/whatsapp/sessions"
+      WHATSAPP_CHROME_PATH: "/usr/bin/chromium"
+      WHATSAPP_HEADLESS: "${WHATSAPP_HEADLESS:-true}"
+      WHATSAPP_WORKER_INTERVAL_MS: "${WHATSAPP_WORKER_INTERVAL_MS:-60000}"
+      WHATSAPP_RETRY_DELAY_MS: "${WHATSAPP_RETRY_DELAY_MS:-900000}"
+      WHATSAPP_MAX_PER_RUN: "${WHATSAPP_MAX_PER_RUN:-20}"
+    ports:
+      - "${WHATSAPP_WORKER_API_PORT:-3010}:3010"
+    volumes:
+      - whatsapp_sessions:/app/workers/whatsapp/sessions
+      - whatsapp_node_persist:/app/workers/whatsapp/.node-persist
+    restart: unless-stopped
+
+volumes:
+  whatsapp_sessions:
+  whatsapp_node_persist:

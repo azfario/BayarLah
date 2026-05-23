@@ -75,6 +75,14 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
+For the local WhatsApp reminder demo, use the one-command launcher instead:
+
+```bash
+npm run dev:demo
+```
+
+This loads `.env.local`, starts the Next.js app and OpenWA worker together, applies local demo defaults, auto-detects Chrome when possible, and stops both processes on `Ctrl+C`.
+
 ## Environment Variables
 
 | Variable | Purpose |
@@ -129,16 +137,35 @@ When the user saves, BayarLah stores the final expense, receipt item history, an
 
 ```bash
 npm run dev
+npm run dev:demo
 npm run build
 npm run lint
 npm run whatsapp:worker
 ```
 
+Use `npm run dev:demo` when testing the full reminder flow locally:
+
+1. Open [http://localhost:3000](http://localhost:3000).
+2. Complete profile onboarding and click **Start WhatsApp link**.
+3. Scan the WhatsApp QR code from your phone.
+4. Create an expense with a real recipient phone.
+5. Click **Send now** and confirm the worker logs a `SENT` attempt.
+
 ## WhatsApp Worker Deployment
 
 The Next.js app can stay on Vercel. Do not install or import OpenWA in the Vercel runtime path.
 
-On the NovaCloud VM, install the root app dependencies, generate Prisma, then install the worker package:
+The Next.js app stays Vercel-native. Docker is only for the NovaCloud OpenWA worker.
+
+For a Dockerized worker on NovaCloud or local testing:
+
+```bash
+docker compose -f docker-compose.worker.yml up --build
+```
+
+The compose setup builds `workers/whatsapp/Dockerfile`, installs Chromium, exposes the worker API on port `3010`, and stores WhatsApp Web sessions in persistent Docker volumes.
+
+For a non-Docker VM setup, install the root app dependencies, generate Prisma, then install the worker package:
 
 ```bash
 npm install --legacy-peer-deps

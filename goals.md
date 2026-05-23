@@ -38,6 +38,11 @@ Build a Malaysian fintech-focused debt reminder app where friends can record sha
   - Send reminder messages with amount owed and DuitNow QR image.
   - Start with a demo-friendly adapter, then prepare for official WhatsApp Business API.
 
+- [x] Local reminder demo and worker deployment automation
+  - Start the app and WhatsApp worker together with one local demo command.
+  - Keep the Vercel app non-Dockerized.
+  - Package only the NovaCloud OpenWA worker with Docker and persistent sessions.
+
 - [ ] Dashboard polish
   - Show debts owed, debts receivable, recent expenses, and reminder status.
   - Keep the interface focused on quick hackathon demo flows.

@@ -5,6 +5,7 @@
   "engines": { "node": ">=20" },
   "scripts": {
     "dev": "next dev --turbopack",
+    "dev:demo": "node scripts/dev-demo.mjs",
     "build": "next build --turbopack",
     "start": "next start",
     "lint": "eslint",
