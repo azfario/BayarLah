@@ -47,3 +47,6 @@ workers/**/sessions/
 workers/**/_IGNORE_*/
 workers/**/*.data.json
 workers/**/logs/
+
+goals.md
+handoff.md
