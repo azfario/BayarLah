@@ -46,6 +46,6 @@ Build a Malaysian fintech-focused debt reminder app where friends can record sha
   - Support full local Docker demo with app, OpenWA Gateway, and poller containers.
   - Support NovaCloud OpenWA Gateway deployment behind an HTTPS reverse proxy.
 
-- [ ] Dashboard polish
+- [x] Dashboard polish
   - Show debts owed, debts receivable, recent expenses, and reminder status.
   - Keep the interface focused on quick hackathon demo flows.
