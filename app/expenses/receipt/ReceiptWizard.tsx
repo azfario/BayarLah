@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
+import ReminderFrequencyPicker from "@/components/ReminderFrequencyPicker";
 import { parseReceipt, saveReceiptExpense } from "@/lib/actions/receipts";
 import {
   distributeEvenly,
@@ -1080,23 +1081,26 @@ function FinalAmountsSection({
         </div>
       ) : null}
 
-      <form action={saveAction} className="mt-5 flex justify-end">
+      <form action={saveAction} className="mt-5 grid gap-5">
         <input type="hidden" name="description" value={description} />
         <input type="hidden" name="receiptPayload" value={receiptPayload} />
-        <button
-          type="submit"
-          disabled={!review?.canSave || isSaving}
-          className="inline-flex items-center justify-center gap-2 rounded-md bg-emerald-700 px-5 py-2 font-medium text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:bg-zinc-300"
-        >
-          {isSaving ? (
-            <>
-              <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-              <span>Saving...</span>
-            </>
-          ) : (
-            "Save receipt expense"
-          )}
-        </button>
+        <ReminderFrequencyPicker />
+        <div className="flex justify-end">
+          <button
+            type="submit"
+            disabled={!review?.canSave || isSaving}
+            className="inline-flex items-center justify-center gap-2 rounded-md bg-emerald-700 px-5 py-2 font-medium text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:bg-zinc-300"
+          >
+            {isSaving ? (
+              <>
+                <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                <span>Saving...</span>
+              </>
+            ) : (
+              "Save receipt expense"
+            )}
+          </button>
+        </div>
       </form>
     </div>
   );

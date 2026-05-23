@@ -34,6 +34,50 @@ EXCEPTION
   WHEN duplicate_object THEN NULL;
 END $$;
 
+DO $$
+BEGIN
+  CREATE TYPE "ReminderFrequencyUnit" AS ENUM (
+    'HOURS',
+    'DAYS'
+  );
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$
+BEGIN
+  CREATE TYPE "ReminderStatus" AS ENUM (
+    'NOT_SCHEDULED',
+    'ACTIVE',
+    'PAUSED'
+  );
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$
+BEGIN
+  CREATE TYPE "WhatsappReminderAttemptStatus" AS ENUM (
+    'PENDING',
+    'SENT',
+    'FAILED'
+  );
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$
+BEGIN
+  CREATE TYPE "WhatsappLinkStatus" AS ENUM (
+    'NOT_LINKED',
+    'LINKING',
+    'LINKED',
+    'FAILED'
+  );
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $$;
+
 CREATE TABLE IF NOT EXISTS "User" (
   "id" TEXT NOT NULL,
   "clerkId" TEXT NOT NULL,
@@ -44,6 +88,11 @@ CREATE TABLE IF NOT EXISTS "User" (
   "duitNowIdType" "DuitNowIdType",
   "duitNowIdValue" TEXT,
   "duitNowQrUrl" TEXT,
+  "whatsappLinkStatus" "WhatsappLinkStatus" NOT NULL DEFAULT 'NOT_LINKED',
+  "whatsappSessionId" TEXT,
+  "whatsappLinkedPhone" TEXT,
+  "whatsappLinkedAt" TIMESTAMP(3),
+  "whatsappLinkError" TEXT,
   "profileCompletedAt" TIMESTAMP(3),
   "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   "updatedAt" TIMESTAMP(3) NOT NULL,
@@ -59,7 +108,18 @@ ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "profilePhotoUrl" TEXT;
 ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "duitNowIdType" "DuitNowIdType";
 ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "duitNowIdValue" TEXT;
 ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "duitNowQrUrl" TEXT;
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "whatsappLinkStatus" "WhatsappLinkStatus" NOT NULL DEFAULT 'NOT_LINKED';
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "whatsappSessionId" TEXT;
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "whatsappLinkedPhone" TEXT;
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "whatsappLinkedAt" TIMESTAMP(3);
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "whatsappLinkError" TEXT;
 ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "profileCompletedAt" TIMESTAMP(3);
+ALTER TABLE "User" ALTER COLUMN "whatsappLinkStatus" SET DEFAULT 'NOT_LINKED';
+UPDATE "User"
+SET "whatsappLinkStatus" = 'NOT_LINKED'
+WHERE "whatsappLinkStatus" IS NULL;
+ALTER TABLE "User" ALTER COLUMN "whatsappLinkStatus" SET NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS "User_whatsappSessionId_key" ON "User"("whatsappSessionId");
 
 CREATE TABLE IF NOT EXISTS "Friend" (
   "id" TEXT NOT NULL,
@@ -115,6 +175,37 @@ CREATE TABLE IF NOT EXISTS "ExpenseShare" (
 
 CREATE UNIQUE INDEX IF NOT EXISTS "ExpenseShare_expenseId_friendId_key" ON "ExpenseShare"("expenseId", "friendId");
 CREATE INDEX IF NOT EXISTS "ExpenseShare_friendId_idx" ON "ExpenseShare"("friendId");
+
+ALTER TABLE "ExpenseShare" ADD COLUMN IF NOT EXISTS "reminderFrequencyValue" INTEGER;
+ALTER TABLE "ExpenseShare" ADD COLUMN IF NOT EXISTS "reminderFrequencyUnit" "ReminderFrequencyUnit";
+ALTER TABLE "ExpenseShare" ADD COLUMN IF NOT EXISTS "reminderStatus" "ReminderStatus" NOT NULL DEFAULT 'NOT_SCHEDULED';
+ALTER TABLE "ExpenseShare" ADD COLUMN IF NOT EXISTS "nextReminderAt" TIMESTAMP(3);
+ALTER TABLE "ExpenseShare" ADD COLUMN IF NOT EXISTS "lastReminderAt" TIMESTAMP(3);
+ALTER TABLE "ExpenseShare" ALTER COLUMN "reminderStatus" SET DEFAULT 'NOT_SCHEDULED';
+UPDATE "ExpenseShare"
+SET "reminderStatus" = 'NOT_SCHEDULED'
+WHERE "reminderStatus" IS NULL;
+CREATE INDEX IF NOT EXISTS "ExpenseShare_reminderStatus_nextReminderAt_idx" ON "ExpenseShare"("reminderStatus", "nextReminderAt");
+
+CREATE TABLE IF NOT EXISTS "WhatsappReminderAttempt" (
+  "id" TEXT NOT NULL,
+  "expenseShareId" TEXT NOT NULL,
+  "status" "WhatsappReminderAttemptStatus" NOT NULL DEFAULT 'PENDING',
+  "recipientPhone" TEXT NOT NULL,
+  "messageText" TEXT NOT NULL,
+  "duitNowQrUrl" TEXT NOT NULL,
+  "providerMessageId" TEXT,
+  "sentAt" TIMESTAMP(3),
+  "errorMessage" TEXT,
+  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updatedAt" TIMESTAMP(3) NOT NULL,
+
+  CONSTRAINT "WhatsappReminderAttempt_pkey" PRIMARY KEY ("id"),
+  CONSTRAINT "WhatsappReminderAttempt_expenseShareId_fkey" FOREIGN KEY ("expenseShareId") REFERENCES "ExpenseShare"("id") ON DELETE CASCADE ON UPDATE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS "WhatsappReminderAttempt_expenseShareId_idx" ON "WhatsappReminderAttempt"("expenseShareId");
+CREATE INDEX IF NOT EXISTS "WhatsappReminderAttempt_status_createdAt_idx" ON "WhatsappReminderAttempt"("status", "createdAt");
 
 CREATE TABLE IF NOT EXISTS "ReceiptItem" (
   "id" TEXT NOT NULL,

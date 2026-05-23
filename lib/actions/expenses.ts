@@ -10,6 +10,7 @@ import {
   parseMoneyToCents,
 } from "@/lib/money";
 import { isProfileComplete } from "@/lib/profile";
+import { parseReminderScheduleFromFormData } from "@/lib/reminders";
 import { ensureUserInDB } from "@/lib/actions/user";
 
 type InlineFriendInput = {
@@ -37,6 +38,8 @@ export async function createExpense(formData: FormData) {
   if (selectedFriendIds.length === 0 && inlineFriendInputs.length === 0) {
     redirectWithMessage("/expenses", "Please select or add at least one friend.");
   }
+
+  const reminderSchedule = getReminderScheduleOrRedirect(formData);
 
   const friends = await prisma.friend.findMany({
     where: {
@@ -88,6 +91,7 @@ export async function createExpense(formData: FormData) {
         create: finalFriendIds.map((friendId) => ({
           friendId,
           owedAmount: centsToMoneyString(amounts.friendCentsById.get(friendId) ?? 0),
+          ...reminderSchedule,
         })),
       },
     },
@@ -119,6 +123,49 @@ export async function deleteExpense(formData: FormData) {
 
   revalidatePath("/expenses");
   redirect("/expenses?success=Expense removed.");
+}
+
+export async function queueExpenseShareReminderNow(formData: FormData) {
+  const user = await ensureUserInDB();
+  if (!isProfileComplete(user)) redirect("/profile?next=/expenses");
+
+  const shareId = getString(formData.get("shareId"));
+  if (!shareId) {
+    redirectWithMessage("/expenses", "Reminder share not found.");
+  }
+
+  const share = await prisma.expenseShare.findFirst({
+    where: {
+      id: shareId,
+      expense: { collectorId: user.id },
+    },
+    select: {
+      id: true,
+      reminderFrequencyValue: true,
+      reminderFrequencyUnit: true,
+      reminderStatus: true,
+    },
+  });
+
+  if (!share) {
+    redirectWithMessage("/expenses", "Reminder share not found.");
+  }
+
+  if (
+    share.reminderStatus !== "ACTIVE" ||
+    !share.reminderFrequencyValue ||
+    !share.reminderFrequencyUnit
+  ) {
+    redirectWithMessage("/expenses", "This share does not have an active reminder.");
+  }
+
+  await prisma.expenseShare.update({
+    where: { id: share.id },
+    data: { nextReminderAt: new Date() },
+  });
+
+  revalidatePath("/expenses");
+  redirect("/expenses?success=Reminder queued for WhatsApp worker.");
 }
 
 function getShareAmounts(
@@ -236,6 +283,18 @@ function getStringList(values: FormDataEntryValue[]) {
     .filter((value): value is string => typeof value === "string")
     .map((value) => value.trim())
     .filter(Boolean);
+}
+
+function getReminderScheduleOrRedirect(formData: FormData) {
+  try {
+    return parseReminderScheduleFromFormData(formData);
+  } catch (error) {
+    redirectWithMessage("/expenses", getErrorMessage(error));
+  }
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : "Something went wrong.";
 }
 
 function redirectWithMessage(path: string, message: string): never {

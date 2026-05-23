@@ -4,9 +4,10 @@ type ProfileFields = {
   duitNowIdType: string | null;
   duitNowIdValue: string | null;
   duitNowQrUrl: string | null;
+  whatsappLinkStatus: string | null;
 };
 
-export function isProfileComplete(user: ProfileFields) {
+export function hasProfileDetails(user: Omit<ProfileFields, "whatsappLinkStatus">) {
   return Boolean(
     user.fullName?.trim() &&
       user.phone?.trim() &&
@@ -14,4 +15,8 @@ export function isProfileComplete(user: ProfileFields) {
       user.duitNowIdValue?.trim() &&
       user.duitNowQrUrl
   );
+}
+
+export function isProfileComplete(user: ProfileFields) {
+  return hasProfileDetails(user) && user.whatsappLinkStatus === "LINKED";
 }

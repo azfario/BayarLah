@@ -26,32 +26,61 @@ enum ReceiptAllocationParticipantType {
   FRIEND
 }
 
+enum ReminderFrequencyUnit {
+  HOURS
+  DAYS
+}
+
+enum ReminderStatus {
+  NOT_SCHEDULED
+  ACTIVE
+  PAUSED
+}
+
+enum WhatsappReminderAttemptStatus {
+  PENDING
+  SENT
+  FAILED
+}
+
+enum WhatsappLinkStatus {
+  NOT_LINKED
+  LINKING
+  LINKED
+  FAILED
+}
+
 model User {
-  id                 String          @id @default(cuid())
-  clerkId            String          @unique
-  email              String
-  fullName           String?
-  phone              String?
-  profilePhotoUrl    String?
-  duitNowIdType      DuitNowIdType?
-  duitNowIdValue     String?
-  duitNowQrUrl       String?
-  profileCompletedAt DateTime?
-  createdAt          DateTime        @default(now())
-  updatedAt          DateTime        @updatedAt
-  friends            Friend[]
-  expenses           Expense[]
+  id                  String             @id @default(cuid())
+  clerkId             String             @unique
+  email               String
+  fullName            String?
+  phone               String?
+  profilePhotoUrl     String?
+  duitNowIdType       DuitNowIdType?
+  duitNowIdValue      String?
+  duitNowQrUrl        String?
+  whatsappLinkStatus  WhatsappLinkStatus @default(NOT_LINKED)
+  whatsappSessionId   String?            @unique
+  whatsappLinkedPhone String?
+  whatsappLinkedAt    DateTime?
+  whatsappLinkError   String?            @db.Text
+  profileCompletedAt  DateTime?
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+  friends             Friend[]
+  expenses            Expense[]
 }
 
 model Friend {
-  id            String         @id @default(cuid())
-  ownerId       String
-  owner         User           @relation(fields: [ownerId], references: [id], onDelete: Cascade)
-  name          String
-  phone         String
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  expenseShares ExpenseShare[]
+  id                     String                  @id @default(cuid())
+  ownerId                String
+  owner                  User                    @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  name                   String
+  phone                  String
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
+  expenseShares          ExpenseShare[]
   receiptItemAllocations ReceiptItemAllocation[]
 
   @@unique([ownerId, phone])
@@ -82,17 +111,42 @@ model Expense {
 }
 
 model ExpenseShare {
-  id         String   @id @default(cuid())
-  expenseId  String
-  expense    Expense  @relation(fields: [expenseId], references: [id], onDelete: Cascade)
-  friendId   String
-  friend     Friend   @relation(fields: [friendId], references: [id])
-  owedAmount Decimal  @db.Decimal(10, 2)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  id                       String                    @id @default(cuid())
+  expenseId                String
+  expense                  Expense                   @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  friendId                 String
+  friend                   Friend                    @relation(fields: [friendId], references: [id])
+  owedAmount               Decimal                   @db.Decimal(10, 2)
+  reminderFrequencyValue   Int?
+  reminderFrequencyUnit    ReminderFrequencyUnit?
+  reminderStatus           ReminderStatus            @default(NOT_SCHEDULED)
+  nextReminderAt           DateTime?
+  lastReminderAt           DateTime?
+  createdAt                DateTime                  @default(now())
+  updatedAt                DateTime                  @updatedAt
+  whatsappReminderAttempts WhatsappReminderAttempt[]
 
   @@unique([expenseId, friendId])
   @@index([friendId])
+  @@index([reminderStatus, nextReminderAt])
+}
+
+model WhatsappReminderAttempt {
+  id                String                        @id @default(cuid())
+  expenseShareId    String
+  expenseShare      ExpenseShare                  @relation(fields: [expenseShareId], references: [id], onDelete: Cascade)
+  status            WhatsappReminderAttemptStatus @default(PENDING)
+  recipientPhone    String
+  messageText       String                        @db.Text
+  duitNowQrUrl      String
+  providerMessageId String?
+  sentAt            DateTime?
+  errorMessage      String?                       @db.Text
+  createdAt         DateTime                      @default(now())
+  updatedAt         DateTime                      @updatedAt
+
+  @@index([expenseShareId])
+  @@index([status, createdAt])
 }
 
 model ReceiptItem {

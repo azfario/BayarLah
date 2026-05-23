@@ -4,11 +4,15 @@ import { currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import ExpenseCreateTabs from "@/app/expenses/ExpenseCreateTabs";
 import SubmitButton from "@/components/SubmitButton";
-import { deleteExpense } from "@/lib/actions/expenses";
+import {
+  deleteExpense,
+  queueExpenseShareReminderNow,
+} from "@/lib/actions/expenses";
 import { ensureUserInDB } from "@/lib/actions/user";
 import { prisma } from "@/lib/db";
 import { formatMoney } from "@/lib/money";
 import { isProfileComplete } from "@/lib/profile";
+import { getReminderStatusLabel } from "@/lib/reminders";
 
 export const dynamic = "force-dynamic";
 
@@ -40,7 +44,13 @@ export default async function ExpensesPage({ searchParams }: ExpensesPageProps) 
       take: 10,
       include: {
         shares: {
-          include: { friend: true },
+          include: {
+            friend: true,
+            whatsappReminderAttempts: {
+              orderBy: { createdAt: "desc" },
+              take: 1,
+            },
+          },
           orderBy: { createdAt: "asc" },
         },
         receiptItems: {
@@ -112,7 +122,7 @@ export default async function ExpensesPage({ searchParams }: ExpensesPageProps) 
                     <div>
                       <h3 className="font-semibold">{expense.description}</h3>
                       <p className="text-sm text-zinc-500">
-                        {expense.splitMode === "EQUAL_SPLIT" ? "Equal split" : "Custom amounts"} ·{" "}
+                        {expense.splitMode === "EQUAL_SPLIT" ? "Equal split" : "Custom amounts"} -{" "}
                         Total paid {formatMoney(expense.totalAmount)}
                       </p>
                     </div>
@@ -134,18 +144,48 @@ export default async function ExpensesPage({ searchParams }: ExpensesPageProps) 
                   </div>
 
                   <div className="mt-3 grid gap-2 md:grid-cols-2">
-                    {expense.shares.map((share) => (
-                      <div
-                        key={share.id}
-                        className="flex items-center justify-between rounded-md bg-zinc-50 px-3 py-2 text-sm"
-                      >
-                        <span>
-                          {share.friend.name}{" "}
-                          <span className="text-zinc-500">({share.friend.phone})</span>
-                        </span>
-                        <span className="font-medium">{formatMoney(share.owedAmount)}</span>
-                      </div>
-                    ))}
+                    {expense.shares.map((share) => {
+                      const latestAttempt = share.whatsappReminderAttempts[0];
+
+                      return (
+                        <div
+                          key={share.id}
+                          className="flex items-start justify-between gap-3 rounded-md bg-zinc-50 px-3 py-2 text-sm"
+                        >
+                          <div>
+                            {share.friend.name}{" "}
+                            <span className="text-zinc-500">({share.friend.phone})</span>
+                            {latestAttempt ? (
+                              <span className="mt-1 block text-xs text-zinc-500">
+                                {getWhatsAppAttemptLabel(latestAttempt)}
+                              </span>
+                            ) : null}
+                          </div>
+                          <div className="flex flex-col items-end gap-2 text-right">
+                            <span>
+                              <span className="block font-medium">
+                                {formatMoney(share.owedAmount)}
+                              </span>
+                              <span className="block text-xs text-zinc-500">
+                                {getReminderStatusLabel(share)}
+                              </span>
+                            </span>
+                            {share.reminderStatus === "ACTIVE" ? (
+                              <form action={queueExpenseShareReminderNow}>
+                                <input type="hidden" name="shareId" value={share.id} />
+                                <SubmitButton
+                                  variant="secondary"
+                                  pendingLabel="Queueing..."
+                                  className="px-3 py-1 text-xs"
+                                >
+                                  Send now
+                                </SubmitButton>
+                              </form>
+                            ) : null}
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
 
                   {expense.receiptItems.length > 0 ? (
@@ -199,4 +239,31 @@ export default async function ExpensesPage({ searchParams }: ExpensesPageProps) 
       </div>
     </main>
   );
+}
+
+const whatsappAttemptDateFormatter = new Intl.DateTimeFormat("en-MY", {
+  timeZone: "Asia/Kuala_Lumpur",
+  day: "numeric",
+  month: "short",
+  hour: "numeric",
+  minute: "2-digit",
+});
+
+function getWhatsAppAttemptLabel(attempt: {
+  status: string;
+  sentAt: Date | null;
+  createdAt: Date;
+  errorMessage: string | null;
+}) {
+  if (attempt.status === "SENT") {
+    return `WhatsApp sent ${whatsappAttemptDateFormatter.format(
+      attempt.sentAt ?? attempt.createdAt
+    )}`;
+  }
+
+  if (attempt.status === "FAILED") {
+    return `WhatsApp failed: ${attempt.errorMessage ?? "check worker logs"}`;
+  }
+
+  return "WhatsApp send pending";
 }

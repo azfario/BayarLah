@@ -4,10 +4,14 @@ import { Buffer } from "node:buffer";
 import { randomUUID } from "node:crypto";
 import type { DuitNowIdType } from "@prisma/client";
 import { currentUser } from "@clerk/nextjs/server";
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { isDuitNowIdType } from "@/lib/duitnow";
+import { normalizeMalaysianPhone } from "@/lib/friends";
+import { hasProfileDetails } from "@/lib/profile";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { startWorkerSession } from "@/lib/whatsapp-worker";
 
 const PROFILE_PHOTOS_BUCKET = "profile-photos";
 const DUITNOW_QRS_BUCKET = "duitnow-qrs";
@@ -19,7 +23,7 @@ export async function saveProfile(formData: FormData) {
 
   const redirectTo = getSafeRedirect(formData.get("redirectTo"));
   const fullName = getString(formData.get("fullName"));
-  const phone = getString(formData.get("phone"));
+  const phone = normalizeMalaysianPhone(getString(formData.get("phone")));
   const duitNowIdType = getString(formData.get("duitNowIdType"));
   const duitNowIdValue = getString(formData.get("duitNowIdValue"));
   const profilePhoto = getUploadedFile(formData.get("profilePhoto"));
@@ -37,6 +41,15 @@ export async function saveProfile(formData: FormData) {
   if (!duitNowQr && !existingUser?.duitNowQrUrl) {
     redirectToProfile("Please upload your DuitNow QR image.", redirectTo);
   }
+
+  const phoneChanged = Boolean(existingUser?.phone && existingUser.phone !== phone);
+  const nextWhatsAppStatus = phoneChanged
+    ? "NOT_LINKED"
+    : existingUser?.whatsappLinkStatus ?? "NOT_LINKED";
+  const profileCompletedAt =
+    nextWhatsAppStatus === "LINKED"
+      ? existingUser?.profileCompletedAt ?? new Date()
+      : null;
 
   const profilePhotoUrl = profilePhoto
     ? await uploadImage(
@@ -65,7 +78,16 @@ export async function saveProfile(formData: FormData) {
       duitNowIdType: duitNowIdType as DuitNowIdType,
       duitNowIdValue,
       duitNowQrUrl,
-      profileCompletedAt: new Date(),
+      profileCompletedAt,
+      ...(phoneChanged
+        ? {
+            whatsappLinkStatus: "NOT_LINKED" as const,
+            whatsappSessionId: null,
+            whatsappLinkedPhone: null,
+            whatsappLinkedAt: null,
+            whatsappLinkError: null,
+          }
+        : {}),
     },
     create: {
       clerkId: clerkUser.id,
@@ -76,11 +98,77 @@ export async function saveProfile(formData: FormData) {
       duitNowIdType: duitNowIdType as DuitNowIdType,
       duitNowIdValue,
       duitNowQrUrl,
-      profileCompletedAt: new Date(),
+      whatsappLinkStatus: "NOT_LINKED",
+      profileCompletedAt: null,
     },
   });
 
+  revalidatePath("/profile");
+
+  if (nextWhatsAppStatus !== "LINKED") {
+    redirectToProfile(
+      phoneChanged
+        ? "Profile saved. Link WhatsApp again because your phone number changed."
+        : "Profile details saved. Link WhatsApp to finish setup.",
+      redirectTo,
+      "success"
+    );
+  }
+
   redirect(redirectTo);
+}
+
+export async function startWhatsAppLink(formData: FormData) {
+  const clerkUser = await currentUser();
+  if (!clerkUser) redirect("/sign-in");
+
+  const redirectTo = getSafeRedirect(formData.get("redirectTo"));
+  const user = await prisma.user.findUnique({
+    where: { clerkId: clerkUser.id },
+  });
+
+  if (!user || !hasProfileDetails(user)) {
+    redirectToProfile("Save your profile details before linking WhatsApp.", redirectTo);
+  }
+
+  const sessionId = user.whatsappSessionId ?? createWhatsAppSessionId(user.id);
+
+  await prisma.user.update({
+    where: { id: user.id },
+    data: {
+      whatsappLinkStatus: "LINKING",
+      whatsappSessionId: sessionId,
+      whatsappLinkedPhone: null,
+      whatsappLinkedAt: null,
+      whatsappLinkError: null,
+      profileCompletedAt: null,
+    },
+  });
+
+  try {
+    await startWorkerSession({
+      userId: user.id,
+      sessionId,
+      expectedPhone: user.phone ?? "",
+    });
+  } catch (error) {
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        whatsappLinkStatus: "FAILED",
+        whatsappLinkError: getErrorMessage(error),
+      },
+    });
+
+    redirectToProfile(getErrorMessage(error), redirectTo);
+  }
+
+  revalidatePath("/profile");
+  redirectToProfile(
+    "WhatsApp link started. Scan the QR code to finish onboarding.",
+    redirectTo,
+    "success"
+  );
 }
 
 function getString(value: FormDataEntryValue | null) {
@@ -134,9 +222,22 @@ function getImageExtension(file: File) {
   return (fromName || fromType || "jpg").replace(/[^a-z0-9]/g, "") || "jpg";
 }
 
-function redirectToProfile(message: string, redirectTo: string) {
+function createWhatsAppSessionId(userId: string) {
+  const safeUserId = userId.replace(/[^a-zA-Z0-9_-]/g, "");
+  return `bayarlah-${safeUserId}`;
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : "Something went wrong.";
+}
+
+function redirectToProfile(
+  message: string,
+  redirectTo: string,
+  kind: "error" | "success" = "error"
+): never {
   redirect(
-    `/profile?error=${encodeURIComponent(message)}&next=${encodeURIComponent(
+    `/profile?${kind}=${encodeURIComponent(message)}&next=${encodeURIComponent(
       redirectTo
     )}`
   );

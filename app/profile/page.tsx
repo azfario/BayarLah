@@ -4,8 +4,9 @@ import { redirect } from "next/navigation";
 import { saveProfile } from "@/lib/actions/profile";
 import { ensureUserInDB } from "@/lib/actions/user";
 import { DUITNOW_ID_TYPES } from "@/lib/duitnow";
-import { isProfileComplete } from "@/lib/profile";
+import { hasProfileDetails, isProfileComplete } from "@/lib/profile";
 import SubmitButton from "@/components/SubmitButton";
+import WhatsAppLinkPanel from "@/components/WhatsAppLinkPanel";
 
 export const dynamic = "force-dynamic";
 
@@ -13,6 +14,7 @@ type ProfilePageProps = {
   searchParams: Promise<{
     error?: string;
     next?: string;
+    success?: string;
   }>;
 };
 
@@ -24,6 +26,7 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
   const params = await searchParams;
   const next = getSafeNext(params.next);
   const completed = isProfileComplete(user);
+  const profileReady = hasProfileDetails(user);
 
   return (
     <main className="min-h-screen bg-zinc-50 px-4 py-8 text-zinc-950">
@@ -41,6 +44,12 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
         {params.error ? (
           <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
             {params.error}
+          </div>
+        ) : null}
+
+        {params.success ? (
+          <div className="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+            {params.success}
           </div>
         ) : null}
 
@@ -165,10 +174,20 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
 
           <div className="mt-6 flex justify-end">
             <SubmitButton pendingLabel="Saving profile...">
-              Save profile
+              {completed ? "Save profile" : "Save profile details"}
             </SubmitButton>
           </div>
         </form>
+
+        <WhatsAppLinkPanel
+          profileReady={profileReady}
+          redirectTo={next}
+          phone={user.phone}
+          initialStatus={user.whatsappLinkStatus}
+          initialLinkedPhone={user.whatsappLinkedPhone}
+          initialError={user.whatsappLinkError}
+          initialLinkedAt={user.whatsappLinkedAt?.toISOString() ?? null}
+        />
       </div>
     </main>
   );

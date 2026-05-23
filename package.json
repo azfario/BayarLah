@@ -7,7 +7,8 @@
     "dev": "next dev --turbopack",
     "build": "next build --turbopack",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "whatsapp:worker": "npm --prefix workers/whatsapp run start"
   },
   "dependencies": {
     "@clerk/nextjs": "^6.39.3",

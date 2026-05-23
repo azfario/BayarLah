@@ -40,3 +40,10 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+workers/**/node_modules/
+workers/**/.node-persist/
+workers/**/sessions/
+workers/**/_IGNORE_*/
+workers/**/*.data.json
+workers/**/logs/

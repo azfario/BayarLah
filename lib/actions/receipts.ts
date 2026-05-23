@@ -12,6 +12,7 @@ import {
   distributeEvenly,
   distributeProportionally,
 } from "@/lib/receipt-calculations";
+import { parseReminderScheduleFromFormData } from "@/lib/reminders";
 import type {
   ParsedReceiptDraft,
   ReceiptParseState,
@@ -201,6 +202,7 @@ export async function saveReceiptExpense(
 
   try {
     const description = getString(formData.get("description"));
+    const reminderSchedule = parseReminderScheduleFromFormData(formData);
     const payload = parseReceiptSavePayload(getString(formData.get("receiptPayload")));
     const savedExpense = await buildReceiptExpenseData(payload, user.id);
 
@@ -225,6 +227,7 @@ export async function saveReceiptExpense(
             .map((friendTotal) => ({
               friendId: friendTotal.friendId,
               owedAmount: centsToMoneyString(friendTotal.owedCents),
+              ...reminderSchedule,
             })),
         },
         receiptItems: {

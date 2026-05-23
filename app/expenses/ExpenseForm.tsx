@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import ReminderFrequencyPicker from "@/components/ReminderFrequencyPicker";
 import SubmitButton from "@/components/SubmitButton";
 import { createExpense } from "@/lib/actions/expenses";
 import { formatMoney, parseMoneyToCents } from "@/lib/money";
@@ -414,6 +415,8 @@ export default function ExpenseForm({ friends }: ExpenseFormProps) {
           {formatMoney(totalCents / 100)}. You can still save this expense.
         </div>
       ) : null}
+
+      <ReminderFrequencyPicker className="mt-5" />
 
       <div className="mt-6 flex justify-end">
         <SubmitButton pendingLabel="Saving expense...">
