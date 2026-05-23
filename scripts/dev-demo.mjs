@@ -173,7 +173,9 @@ function printBanner(currentEnv) {
 }
 
 function startProcess(name, command, args) {
-  const child = spawn(command, args, {
+  const { spawnCommand, spawnArgs } = getSpawnConfig(command, args);
+
+  const child = spawn(spawnCommand, spawnArgs, {
     cwd: rootDir,
     env,
     shell: false,
@@ -197,6 +199,26 @@ function startProcess(name, command, args) {
   });
 
   return child;
+}
+
+function getSpawnConfig(command, args) {
+  if (process.platform !== "win32") {
+    return { spawnCommand: command, spawnArgs: args };
+  }
+
+  return {
+    spawnCommand: process.env.ComSpec || "cmd.exe",
+    spawnArgs: ["/d", "/s", "/c", quoteWindowsCommand([command, ...args])],
+  };
+}
+
+function quoteWindowsCommand(parts) {
+  return parts.map(quoteWindowsArg).join(" ");
+}
+
+function quoteWindowsArg(arg) {
+  if (!/[()\][%!^"`<>&|,;=\s]/.test(arg)) return arg;
+  return `"${arg.replace(/(["^])/g, "^$1")}"`;
 }
 
 function prefixOutput(name, chunk) {
