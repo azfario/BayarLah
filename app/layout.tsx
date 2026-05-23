@@ -3,8 +3,8 @@ import { ClerkProvider } from "@clerk/nextjs";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Hackathon Starter",
-  description: "Next.js + Clerk + Supabase + Prisma starter template",
+  title: "BayarLah",
+  description: "no more that awkward moment when you have to ask for money ^_^",
 };
 
 export default function RootLayout({

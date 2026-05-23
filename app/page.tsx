@@ -8,8 +8,8 @@ export default async function Home() {
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-4">
-      <h1 className="text-4xl font-bold">Hackathon Starter</h1>
-      <p className="text-gray-500">Next.js · Clerk · Supabase · Prisma</p>
+      <h1 className="text-4xl font-bold">BayarLah</h1>
+      <p className="text-gray-500">no more that awkward moment when you have to ask for money ^_^</p>
       {userId ? (
         <Link
           href="/dashboard"

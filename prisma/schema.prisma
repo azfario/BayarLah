@@ -8,10 +8,118 @@ datasource db {
   directUrl = env("DIRECT_URL")
 }
 
+enum DuitNowIdType {
+  PHONE
+  NRIC
+  PASSPORT
+  BUSINESS_REGISTRATION
+  ARMY_POLICE
+}
+
+enum ExpenseSplitMode {
+  EQUAL_SPLIT
+  CUSTOM_AMOUNT
+}
+
+enum ReceiptAllocationParticipantType {
+  COLLECTOR
+  FRIEND
+}
+
 model User {
-  id        String   @id @default(cuid())
-  clerkId   String   @unique
-  email     String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                 String          @id @default(cuid())
+  clerkId            String          @unique
+  email              String
+  fullName           String?
+  phone              String?
+  profilePhotoUrl    String?
+  duitNowIdType      DuitNowIdType?
+  duitNowIdValue     String?
+  duitNowQrUrl       String?
+  profileCompletedAt DateTime?
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+  friends            Friend[]
+  expenses           Expense[]
+}
+
+model Friend {
+  id            String         @id @default(cuid())
+  ownerId       String
+  owner         User           @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  name          String
+  phone         String
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  expenseShares ExpenseShare[]
+  receiptItemAllocations ReceiptItemAllocation[]
+
+  @@unique([ownerId, phone])
+  @@index([ownerId])
+}
+
+model Expense {
+  id                   String           @id @default(cuid())
+  collectorId          String
+  collector            User             @relation(fields: [collectorId], references: [id], onDelete: Cascade)
+  description          String
+  totalAmount          Decimal          @db.Decimal(10, 2)
+  splitMode            ExpenseSplitMode
+  collectorAmount      Decimal?         @db.Decimal(10, 2)
+  receiptMerchantName  String?
+  receiptDate          String?
+  receiptSubtotal      Decimal?         @db.Decimal(10, 2)
+  receiptTax           Decimal?         @db.Decimal(10, 2)
+  receiptServiceCharge Decimal?         @db.Decimal(10, 2)
+  receiptRounding      Decimal?         @db.Decimal(10, 2)
+  receiptParsedTotal   Decimal?         @db.Decimal(10, 2)
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
+  shares               ExpenseShare[]
+  receiptItems         ReceiptItem[]
+
+  @@index([collectorId])
+}
+
+model ExpenseShare {
+  id         String   @id @default(cuid())
+  expenseId  String
+  expense    Expense  @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  friendId   String
+  friend     Friend   @relation(fields: [friendId], references: [id])
+  owedAmount Decimal  @db.Decimal(10, 2)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([expenseId, friendId])
+  @@index([friendId])
+}
+
+model ReceiptItem {
+  id          String                  @id @default(cuid())
+  expenseId   String
+  expense     Expense                 @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  name        String
+  amount      Decimal                 @db.Decimal(10, 2)
+  sortOrder   Int
+  createdAt   DateTime                @default(now())
+  updatedAt   DateTime                @updatedAt
+  allocations ReceiptItemAllocation[]
+
+  @@index([expenseId])
+}
+
+model ReceiptItemAllocation {
+  id              String                           @id @default(cuid())
+  receiptItemId   String
+  receiptItem     ReceiptItem                      @relation(fields: [receiptItemId], references: [id], onDelete: Cascade)
+  participantType ReceiptAllocationParticipantType
+  friendId        String?
+  friend          Friend?                          @relation(fields: [friendId], references: [id])
+  amount          Decimal                          @db.Decimal(10, 2)
+  createdAt       DateTime                         @default(now())
+  updatedAt       DateTime                         @updatedAt
+
+  @@index([receiptItemId])
+  @@index([friendId])
 }

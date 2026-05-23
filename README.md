@@ -1,42 +1,71 @@
-# Hackathon Starter
+# BayarLah
 
-Clone-and-build template. Auth, database, and ORM wired up out of the box.
+BayarLah is a Malaysian fintech hackathon app for recording group expenses and helping collectors remind friends to pay back through DuitNow details. It supports profile onboarding, friend management, manual expense entry, and receipt-assisted expense creation.
+
+## Current Features
+
+- Clerk sign-up/sign-in with protected app routes.
+- Profile onboarding with full name, phone, Clerk email, optional profile photo, DuitNow ID, and DuitNow QR.
+- Friend management with Malaysian phone normalization toward `+60`.
+- Manual expenses with equal split and custom amount modes.
+- Receipt upload/camera capture on mobile using native file input.
+- Browser-side image compression before OCR upload.
+- OCR.space text extraction followed by Gemini Flash receipt parsing.
+- Editable receipt review for items, tax, service charge, rounding, and total.
+- Receipt split modes:
+  - Equal split: split the whole receipt total across collector plus selected friends.
+  - Custom amount: match parsed item units to collector/friends, then allocate tax/service/rounding proportionally.
+- Saved receipt item history and participant allocations without permanently storing receipt photos.
+- Delete saved friends and expenses.
 
 ## Stack
 
-- **Next.js 15** — App Router, TypeScript, Turbopack
-- **Tailwind CSS v4**
-- **Clerk v6** — authentication (sign-in, sign-up, session)
-- **Supabase** — Postgres database, storage/realtime helpers
-- **Prisma v5** — ORM, migrations
+- Next.js 15 App Router
+- React 19
+- TypeScript
+- Tailwind CSS v4
+- Clerk authentication
+- Supabase Postgres and Storage
+- Prisma ORM
+- OCR.space API
+- Gemini API
 
-## Prerequisites
+## App Routes
 
-- Node.js 20+
-- A [Clerk](https://clerk.com) account and application
-- A [Supabase](https://supabase.com) project
+- `/` - landing page
+- `/sign-in` - Clerk sign in
+- `/sign-up` - Clerk sign up
+- `/dashboard` - protected dashboard
+- `/profile` - profile completion and editing
+- `/friends` - saved WhatsApp contact-style friends
+- `/expenses` - manual and receipt-assisted expense creation
+- `/expenses/receipt` - redirects to the receipt tab on `/expenses`
 
 ## Setup
 
+Install dependencies:
+
 ```bash
-# 1. Clone
-git clone <your-repo-url>
-cd hackathon-starter
-
-# 2. Install dependencies
 npm install --legacy-peer-deps
+```
 
-# 3. Configure environment
-cp .env.example .env.local
-# Fill in all values in .env.local
+Create environment variables from the example file:
 
-# 4. Generate Prisma client
+```bash
+copy .env.example .env.local
+```
+
+Fill in the required values in `.env.local`.
+
+Generate the Prisma client:
+
+```bash
 npx prisma generate
+```
 
-# 5. Run migrations (requires DIRECT_URL set in .env.local)
-npx prisma migrate dev --name init
+Run the development server:
 
-# 6. Start dev server
+```bash
 npm run dev
 ```
 
@@ -44,41 +73,54 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ## Environment Variables
 
-See `.env.example` for all required keys.
-
-| Variable | Where to find it |
+| Variable | Purpose |
 |---|---|
-| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | Clerk dashboard → API Keys |
-| `CLERK_SECRET_KEY` | Clerk dashboard → API Keys |
-| `NEXT_PUBLIC_SUPABASE_URL` | Supabase dashboard → Project Settings → API |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase dashboard → Project Settings → API |
-| `SUPABASE_SERVICE_ROLE_KEY` | Supabase dashboard → Project Settings → API |
-| `DATABASE_URL` | Supabase → Project Settings → Database → Connection Pooling (port 6543) |
-| `DIRECT_URL` | Supabase → Project Settings → Database → Direct connection (port 5432) |
+| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | Clerk browser key |
+| `CLERK_SECRET_KEY` | Clerk server key |
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon key |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key for server uploads |
+| `DATABASE_URL` | Supabase pooled Postgres URL for Prisma |
+| `DIRECT_URL` | Supabase direct Postgres URL for migrations |
+| `OCR_SPACE_API_KEY` | OCR.space key for receipt text extraction |
+| `GEMINI_API_KEY` | Gemini key for receipt parsing |
+| `GEMINI_MODEL` | Gemini model, defaults to `gemini-2.5-flash` |
 
-## Folder Structure
+## Database
 
+The Prisma schema lives in `prisma/schema.prisma`.
+
+For Supabase SQL setup, use the scripts in `supabase/`:
+
+- user profile fields and storage buckets
+- friends
+- expenses and expense shares
+- receipt item history and receipt item allocations
+
+After changing the Prisma schema, run:
+
+```bash
+npx prisma validate
+npx prisma generate
 ```
-app/
-  page.tsx                      # Landing page
-  layout.tsx                    # Root layout with ClerkProvider
-  sign-in/[[...sign-in]]/       # Clerk sign-in page
-  sign-up/[[...sign-up]]/       # Clerk sign-up page
-  dashboard/                    # Protected route
-components/                     # UI components (empty, add yours here)
-lib/
-  db.ts                         # Prisma client singleton
-  actions/user.ts               # Server action: upsert user on login
-  supabase/
-    client.ts                   # Browser Supabase client
-    server.ts                   # Server Supabase client (service role)
-prisma/
-  schema.prisma                 # Database schema
-middleware.ts                   # Clerk route protection
+
+## Receipt Flow
+
+Receipt photos are temporary inputs only. The browser compresses the uploaded or captured image, sends it to the server action, OCR.space extracts text, and Gemini converts the OCR text into editable structured data.
+
+When the user saves, BayarLah stores the final expense, receipt item history, and split allocations. It does not store the original receipt image.
+
+## Scripts
+
+```bash
+npm run dev
+npm run build
+npm run lint
 ```
 
-## How Auth Works
+## Roadmap
 
-1. `middleware.ts` intercepts all requests to `/dashboard` — unauthenticated users are redirected to `/sign-in`
-2. On dashboard load, `ensureUserInDB()` upserts the Clerk user into the Prisma `User` table (idempotent — safe to call every render)
-3. Supabase client helpers are available for storage/realtime; all DB queries use Prisma
+- Reminder scheduling for unpaid debts.
+- WhatsApp/OpenWA notification sending.
+- Paid/unpaid tracking.
+- Dashboard summary for receivables, recent expenses, and reminder status.
