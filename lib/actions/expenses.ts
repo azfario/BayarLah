@@ -110,14 +110,52 @@ export async function deleteExpense(formData: FormData) {
     redirectWithMessage("/expenses", "Expense not found.");
   }
 
-  const result = await prisma.expense.deleteMany({
-    where: {
-      id: expenseId,
-      collectorId: user.id,
-    },
+  const deleted = await prisma.$transaction(async (tx) => {
+    const expense = await tx.expense.findFirst({
+      where: {
+        id: expenseId,
+        collectorId: user.id,
+      },
+      select: {
+        id: true,
+        shares: { select: { id: true } },
+        receiptItems: { select: { id: true } },
+      },
+    });
+
+    if (!expense) return false;
+
+    const shareIds = expense.shares.map((share) => share.id);
+    if (shareIds.length > 0) {
+      await tx.whatsappReminderAttempt.deleteMany({
+        where: { expenseShareId: { in: shareIds } },
+      });
+      await tx.expenseShare.deleteMany({
+        where: { id: { in: shareIds } },
+      });
+    }
+
+    const receiptItemIds = expense.receiptItems.map((item) => item.id);
+    if (receiptItemIds.length > 0) {
+      await tx.receiptItemAllocation.deleteMany({
+        where: { receiptItemId: { in: receiptItemIds } },
+      });
+      await tx.receiptItem.deleteMany({
+        where: { id: { in: receiptItemIds } },
+      });
+    }
+
+    const result = await tx.expense.deleteMany({
+      where: {
+        id: expense.id,
+        collectorId: user.id,
+      },
+    });
+
+    return result.count > 0;
   });
 
-  if (result.count === 0) {
+  if (!deleted) {
     redirectWithMessage("/expenses", "Expense not found.");
   }
 
