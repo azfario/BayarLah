@@ -9,6 +9,7 @@
     "build": "next build --turbopack",
     "start": "next start",
     "lint": "eslint",
+    "test:payment-proofs": "node --test --experimental-strip-types tests/payment-proofs.test.mjs tests/payment-proof-matching.test.mjs tests/payment-proof-inbound.test.mjs",
     "docker:demo": "docker compose -f docker-compose.demo.yml up --build",
     "docker:worker": "docker compose -f docker-compose.worker.yml up --build",
     "docker:novacloud": "docker compose -f docker-compose.novacloud.yml up -d --build",

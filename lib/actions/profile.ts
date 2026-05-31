@@ -26,6 +26,7 @@ export async function saveProfile(formData: FormData) {
   const phone = normalizeMalaysianPhone(getString(formData.get("phone")));
   const duitNowIdType = getString(formData.get("duitNowIdType"));
   const duitNowIdValue = getString(formData.get("duitNowIdValue"));
+  const duitNowRecipientName = getString(formData.get("duitNowRecipientName"));
   const profilePhoto = getUploadedFile(formData.get("profilePhoto"));
   const duitNowQr = getUploadedFile(formData.get("duitNowQr"));
   const email = clerkUser.emailAddresses[0]?.emailAddress ?? "";
@@ -34,7 +35,13 @@ export async function saveProfile(formData: FormData) {
     where: { clerkId: clerkUser.id },
   });
 
-  if (!fullName || !phone || !duitNowIdValue || !isDuitNowIdType(duitNowIdType)) {
+  if (
+    !fullName ||
+    !phone ||
+    !duitNowIdValue ||
+    !duitNowRecipientName ||
+    !isDuitNowIdType(duitNowIdType)
+  ) {
     redirectToProfile("Please complete all required profile fields.", redirectTo);
   }
 
@@ -77,6 +84,7 @@ export async function saveProfile(formData: FormData) {
       profilePhotoUrl,
       duitNowIdType: duitNowIdType as DuitNowIdType,
       duitNowIdValue,
+      duitNowRecipientName,
       duitNowQrUrl,
       profileCompletedAt,
       ...(phoneChanged
@@ -97,6 +105,7 @@ export async function saveProfile(formData: FormData) {
       profilePhotoUrl,
       duitNowIdType: duitNowIdType as DuitNowIdType,
       duitNowIdValue,
+      duitNowRecipientName,
       duitNowQrUrl,
       whatsappLinkStatus: "NOT_LINKED",
       profileCompletedAt: null,

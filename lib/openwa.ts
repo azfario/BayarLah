@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { Buffer } from "node:buffer";
 
 export type WhatsAppLinkStatusValue =
   | "NOT_LINKED"
@@ -30,6 +31,23 @@ export type OpenWaMessageResult = {
   messageId?: string | null;
   status?: string | null;
   timestamp?: string | null;
+};
+
+export type OpenWaInboundMessage = {
+  id?: string | null;
+  messageId?: string | null;
+  _serialized?: string | null;
+  from?: string | null;
+  chatId?: string | null;
+  type?: string | null;
+  mimetype?: string | null;
+  mimeType?: string | null;
+  timestamp?: string | number | null;
+  fromMe?: boolean | null;
+  hasMedia?: boolean | null;
+  mediaUrl?: string | null;
+  url?: string | null;
+  body?: string | null;
 };
 
 export type WhatsAppGatewaySessionStatus = {
@@ -138,6 +156,62 @@ export async function sendOpenWaImage(input: {
   );
 }
 
+export async function sendOpenWaText(input: {
+  sessionId: string;
+  chatId: string;
+  text: string;
+}) {
+  return requestOpenWa<OpenWaMessageResult>(
+    `/sessions/${encodeURIComponent(input.sessionId)}/messages/send-text`,
+    {
+      method: "POST",
+      body: {
+        chatId: input.chatId,
+        text: input.text,
+      },
+    }
+  );
+}
+
+export async function listOpenWaMessages(sessionId: string, limit = 30) {
+  const payload = await requestOpenWa<
+    | OpenWaInboundMessage[]
+    | {
+        messages?: OpenWaInboundMessage[];
+        items?: OpenWaInboundMessage[];
+        data?: OpenWaInboundMessage[];
+      }
+  >(
+    `/sessions/${encodeURIComponent(sessionId)}/messages?limit=${encodeURIComponent(
+      String(limit)
+    )}`,
+    { method: "GET" }
+  );
+
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload.messages)) return payload.messages;
+  if (Array.isArray(payload.items)) return payload.items;
+  if (Array.isArray(payload.data)) return payload.data;
+
+  return [];
+}
+
+export async function downloadOpenWaMessageMedia(input: {
+  sessionId: string;
+  messageId: string;
+  mediaUrl?: string | null;
+}) {
+  if (input.mediaUrl) {
+    return downloadOpenWaBytes(input.mediaUrl);
+  }
+
+  return requestOpenWaBytes(
+    `/sessions/${encodeURIComponent(input.sessionId)}/messages/${encodeURIComponent(
+      input.messageId
+    )}/media`
+  );
+}
+
 export function mapOpenWaSessionStatus(status: string | null | undefined) {
   switch ((status ?? "").toUpperCase()) {
     case "CONNECTED":
@@ -239,6 +313,74 @@ async function requestOpenWa<T>(path: string, options: RequestOpenWaOptions) {
   } catch (error) {
     if (error instanceof Error && error.name === "AbortError") {
       throw new Error("OpenWA Gateway API timed out.");
+    }
+
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function requestOpenWaBytes(path: string) {
+  const { baseUrl, apiKey } = getOpenWaConfig();
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
+  try {
+    const response = await fetch(new URL(path.replace(/^\//, ""), baseUrl), {
+      method: "GET",
+      cache: "no-store",
+      signal: controller.signal,
+      headers: {
+        Accept: "*/*",
+        "X-API-Key": apiKey,
+      },
+    });
+
+    if (!response.ok) {
+      const payload = await readOpenWaPayload<unknown>(response);
+      throw createOpenWaError(response, payload);
+    }
+
+    return {
+      bytes: Buffer.from(await response.arrayBuffer()),
+      contentType: response.headers.get("content-type") || "image/jpeg",
+    };
+  } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") {
+      throw new Error("OpenWA Gateway API timed out.");
+    }
+
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function downloadOpenWaBytes(url: string) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+
+  try {
+    const response = await fetch(url, {
+      cache: "no-store",
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      throw new OpenWaApiError(
+        `OpenWA media download returned ${response.status}.`,
+        response.status
+      );
+    }
+
+    return {
+      bytes: Buffer.from(await response.arrayBuffer()),
+      contentType: response.headers.get("content-type") || "image/jpeg",
+    };
+  } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") {
+      throw new Error("OpenWA media download timed out.");
     }
 
     throw error;

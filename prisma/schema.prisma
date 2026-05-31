@@ -50,26 +50,36 @@ enum WhatsappLinkStatus {
   FAILED
 }
 
+enum PaymentProofStatus {
+  PENDING_REVIEW
+  AUTO_CONFIRMED
+  CONFIRMED
+  REJECTED
+  DUPLICATE_REJECTED
+}
+
 model User {
-  id                  String             @id @default(cuid())
-  clerkId             String             @unique
-  email               String
-  fullName            String?
-  phone               String?
-  profilePhotoUrl     String?
-  duitNowIdType       DuitNowIdType?
-  duitNowIdValue      String?
-  duitNowQrUrl        String?
-  whatsappLinkStatus  WhatsappLinkStatus @default(NOT_LINKED)
-  whatsappSessionId   String?            @unique
-  whatsappLinkedPhone String?
-  whatsappLinkedAt    DateTime?
-  whatsappLinkError   String?            @db.Text
-  profileCompletedAt  DateTime?
-  createdAt           DateTime           @default(now())
-  updatedAt           DateTime           @updatedAt
-  friends             Friend[]
-  expenses            Expense[]
+  id                   String             @id @default(cuid())
+  clerkId              String             @unique
+  email                String
+  fullName             String?
+  phone                String?
+  profilePhotoUrl      String?
+  duitNowIdType        DuitNowIdType?
+  duitNowIdValue       String?
+  duitNowRecipientName String?
+  duitNowQrUrl         String?
+  whatsappLinkStatus   WhatsappLinkStatus @default(NOT_LINKED)
+  whatsappSessionId    String?            @unique
+  whatsappLinkedPhone  String?
+  whatsappLinkedAt     DateTime?
+  whatsappLinkError    String?            @db.Text
+  profileCompletedAt   DateTime?
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+  friends              Friend[]
+  expenses             Expense[]
+  paymentProofs        PaymentProof[]
 }
 
 model Friend {
@@ -82,6 +92,7 @@ model Friend {
   updatedAt              DateTime                @updatedAt
   expenseShares          ExpenseShare[]
   receiptItemAllocations ReceiptItemAllocation[]
+  paymentProofs          PaymentProof[]
 
   @@unique([ownerId, phone])
   @@index([ownerId])
@@ -126,10 +137,38 @@ model ExpenseShare {
   createdAt                DateTime                  @default(now())
   updatedAt                DateTime                  @updatedAt
   whatsappReminderAttempts WhatsappReminderAttempt[]
+  paymentProofs            PaymentProof[]
 
   @@unique([expenseId, friendId])
   @@index([friendId])
   @@index([reminderStatus, nextReminderAt])
+}
+
+model PaymentProof {
+  id                         String             @id @default(cuid())
+  collectorId                String
+  collector                  User               @relation(fields: [collectorId], references: [id], onDelete: Cascade)
+  debtorFriendId             String?
+  debtorFriend               Friend?            @relation(fields: [debtorFriendId], references: [id])
+  expenseShareId             String?
+  expenseShare               ExpenseShare?      @relation(fields: [expenseShareId], references: [id])
+  status                     PaymentProofStatus @default(PENDING_REVIEW)
+  imageStoragePath           String
+  imageHash                  String             @unique
+  parsedTransactionReference String?            @unique
+  parsedAmount               Decimal?           @db.Decimal(10, 2)
+  parsedRecipient            String?
+  parsedTimestamp            DateTime?
+  rawOcrText                 String?            @db.Text
+  reviewReason               String?            @db.Text
+  reviewedAt                 DateTime?
+  rejectedReason             String?            @db.Text
+  createdAt                  DateTime           @default(now())
+  updatedAt                  DateTime           @updatedAt
+
+  @@index([collectorId, status])
+  @@index([debtorFriendId])
+  @@index([expenseShareId])
 }
 
 model WhatsappReminderAttempt {

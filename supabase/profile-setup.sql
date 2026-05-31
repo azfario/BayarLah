@@ -78,6 +78,19 @@ EXCEPTION
   WHEN duplicate_object THEN NULL;
 END $$;
 
+DO $$
+BEGIN
+  CREATE TYPE "PaymentProofStatus" AS ENUM (
+    'PENDING_REVIEW',
+    'AUTO_CONFIRMED',
+    'CONFIRMED',
+    'REJECTED',
+    'DUPLICATE_REJECTED'
+  );
+EXCEPTION
+  WHEN duplicate_object THEN NULL;
+END $$;
+
 CREATE TABLE IF NOT EXISTS "User" (
   "id" TEXT NOT NULL,
   "clerkId" TEXT NOT NULL,
@@ -87,6 +100,7 @@ CREATE TABLE IF NOT EXISTS "User" (
   "profilePhotoUrl" TEXT,
   "duitNowIdType" "DuitNowIdType",
   "duitNowIdValue" TEXT,
+  "duitNowRecipientName" TEXT,
   "duitNowQrUrl" TEXT,
   "whatsappLinkStatus" "WhatsappLinkStatus" NOT NULL DEFAULT 'NOT_LINKED',
   "whatsappSessionId" TEXT,
@@ -107,6 +121,7 @@ ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "phone" TEXT;
 ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "profilePhotoUrl" TEXT;
 ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "duitNowIdType" "DuitNowIdType";
 ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "duitNowIdValue" TEXT;
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "duitNowRecipientName" TEXT;
 ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "duitNowQrUrl" TEXT;
 ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "whatsappLinkStatus" "WhatsappLinkStatus" NOT NULL DEFAULT 'NOT_LINKED';
 ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "whatsappSessionId" TEXT;
@@ -240,6 +255,37 @@ CREATE TABLE IF NOT EXISTS "ReceiptItemAllocation" (
 CREATE INDEX IF NOT EXISTS "ReceiptItemAllocation_receiptItemId_idx" ON "ReceiptItemAllocation"("receiptItemId");
 CREATE INDEX IF NOT EXISTS "ReceiptItemAllocation_friendId_idx" ON "ReceiptItemAllocation"("friendId");
 
+CREATE TABLE IF NOT EXISTS "PaymentProof" (
+  "id" TEXT NOT NULL,
+  "collectorId" TEXT NOT NULL,
+  "debtorFriendId" TEXT,
+  "expenseShareId" TEXT,
+  "status" "PaymentProofStatus" NOT NULL DEFAULT 'PENDING_REVIEW',
+  "imageStoragePath" TEXT NOT NULL,
+  "imageHash" TEXT NOT NULL,
+  "parsedTransactionReference" TEXT,
+  "parsedAmount" DECIMAL(10,2),
+  "parsedRecipient" TEXT,
+  "parsedTimestamp" TIMESTAMP(3),
+  "rawOcrText" TEXT,
+  "reviewReason" TEXT,
+  "reviewedAt" TIMESTAMP(3),
+  "rejectedReason" TEXT,
+  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updatedAt" TIMESTAMP(3) NOT NULL,
+
+  CONSTRAINT "PaymentProof_pkey" PRIMARY KEY ("id"),
+  CONSTRAINT "PaymentProof_collectorId_fkey" FOREIGN KEY ("collectorId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT "PaymentProof_debtorFriendId_fkey" FOREIGN KEY ("debtorFriendId") REFERENCES "Friend"("id") ON DELETE SET NULL ON UPDATE CASCADE,
+  CONSTRAINT "PaymentProof_expenseShareId_fkey" FOREIGN KEY ("expenseShareId") REFERENCES "ExpenseShare"("id") ON DELETE SET NULL ON UPDATE CASCADE
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS "PaymentProof_imageHash_key" ON "PaymentProof"("imageHash");
+CREATE UNIQUE INDEX IF NOT EXISTS "PaymentProof_parsedTransactionReference_key" ON "PaymentProof"("parsedTransactionReference");
+CREATE INDEX IF NOT EXISTS "PaymentProof_collectorId_status_idx" ON "PaymentProof"("collectorId", "status");
+CREATE INDEX IF NOT EXISTS "PaymentProof_debtorFriendId_idx" ON "PaymentProof"("debtorFriendId");
+CREATE INDEX IF NOT EXISTS "PaymentProof_expenseShareId_idx" ON "PaymentProof"("expenseShareId");
+
 INSERT INTO storage.buckets (
   id,
   name,
@@ -259,6 +305,13 @@ VALUES
     'duitnow-qrs',
     'duitnow-qrs',
     true,
+    5242880,
+    ARRAY['image/jpeg', 'image/png', 'image/webp', 'image/heic']::text[]
+  ),
+  (
+    'payment-proofs',
+    'payment-proofs',
+    false,
     5242880,
     ARRAY['image/jpeg', 'image/png', 'image/webp', 'image/heic']::text[]
   )

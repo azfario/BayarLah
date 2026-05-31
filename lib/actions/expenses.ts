@@ -7,11 +7,13 @@ import { prisma } from "@/lib/db";
 import { normalizeMalaysianPhone } from "@/lib/friends";
 import {
   centsToMoneyString,
+  formatMoney,
   parseMoneyToCents,
 } from "@/lib/money";
+import { sendOpenWaText } from "@/lib/openwa";
 import { isProfileComplete } from "@/lib/profile";
 import { parseReminderScheduleFromFormData } from "@/lib/reminders";
-import { getNextReminderAtFromCadence } from "@/lib/whatsapp";
+import { getNextReminderAtFromCadence, toOpenWaChatId } from "@/lib/whatsapp";
 import { ensureUserInDB } from "@/lib/actions/user";
 
 type InlineFriendInput = {
@@ -194,6 +196,10 @@ export async function queueExpenseShareReminderNow(formData: FormData) {
     redirectWithMessage("/expenses", "This share is already marked paid.");
   }
 
+  if (await hasPendingPaymentProofForShare(share.id)) {
+    redirectWithMessage("/expenses", "This share has a payment proof pending review.");
+  }
+
   if (
     share.reminderStatus !== "ACTIVE" ||
     !share.reminderFrequencyValue ||
@@ -296,12 +302,209 @@ export async function markExpenseShareUnpaid(formData: FormData) {
   redirect("/expenses?success=Friend marked unpaid.");
 }
 
+export async function confirmPaymentProof(formData: FormData) {
+  const user = await ensureUserInDB();
+  if (!isProfileComplete(user)) redirect("/profile?next=/expenses");
+
+  const proofId = getString(formData.get("paymentProofId"));
+  const shareId = getString(formData.get("shareId"));
+  if (!proofId || !shareId) {
+    redirectWithMessage("/expenses", "Payment proof review data is missing.");
+  }
+
+  const paidAt = new Date();
+  const confirmed = await prisma.$transaction(async (tx) => {
+    const proof = await tx.paymentProof.findFirst({
+      where: {
+        id: proofId,
+        collectorId: user.id,
+        status: "PENDING_REVIEW",
+      },
+      select: {
+        id: true,
+        debtorFriendId: true,
+      },
+    });
+
+    if (!proof) return false;
+
+    const share = await tx.expenseShare.findFirst({
+      where: {
+        id: shareId,
+        paidAt: null,
+        expense: { collectorId: user.id },
+        ...(proof.debtorFriendId ? { friendId: proof.debtorFriendId } : {}),
+      },
+      select: {
+        id: true,
+        owedAmount: true,
+        friend: { select: { name: true, phone: true } },
+        expense: { select: { description: true } },
+      },
+    });
+
+    if (!share) return false;
+
+    await tx.expenseShare.update({
+      where: { id: share.id },
+      data: {
+        paidAt,
+        reminderStatus: "PAUSED",
+        nextReminderAt: null,
+      },
+    });
+
+    await tx.paymentProof.update({
+      where: { id: proof.id },
+      data: {
+        status: "CONFIRMED",
+        expenseShareId: share.id,
+        reviewedAt: paidAt,
+        rejectedReason: null,
+      },
+    });
+
+    return {
+      debtorPhone: share.friend.phone,
+      expenseDescription: share.expense.description,
+      amountLabel: formatMoney(share.owedAmount),
+    };
+  });
+
+  if (!confirmed) {
+    redirectWithMessage("/expenses", "Payment proof or selected debt is no longer reviewable.");
+  }
+
+  await notifyDebtorPaymentProofReviewed({
+    sessionId: user.whatsappSessionId,
+    debtorPhone: confirmed.debtorPhone,
+    text: [
+      "Payment confirmed.",
+      `You're squared up for ${confirmed.expenseDescription} (${confirmed.amountLabel}).`,
+    ].join("\n"),
+    context: `confirmed proof ${proofId}`,
+  });
+
+  revalidatePath("/expenses");
+  redirect("/expenses?success=Payment proof confirmed.");
+}
+
+export async function rejectPaymentProof(formData: FormData) {
+  const user = await ensureUserInDB();
+  if (!isProfileComplete(user)) redirect("/profile?next=/expenses");
+
+  const proofId = getString(formData.get("paymentProofId"));
+  if (!proofId) {
+    redirectWithMessage("/expenses", "Payment proof review data is missing.");
+  }
+
+  const reviewedAt = new Date();
+  const rejected = await prisma.$transaction(async (tx) => {
+    const proof = await tx.paymentProof.findFirst({
+      where: {
+        id: proofId,
+        collectorId: user.id,
+        status: "PENDING_REVIEW",
+      },
+      select: {
+        id: true,
+        parsedAmount: true,
+        debtorFriend: { select: { phone: true } },
+        expenseShare: {
+          select: {
+            expense: { select: { description: true } },
+            friend: { select: { phone: true } },
+          },
+        },
+      },
+    });
+
+    if (!proof) return null;
+
+    await tx.paymentProof.update({
+      where: { id: proof.id },
+      data: {
+        status: "REJECTED",
+        reviewedAt,
+        rejectedReason: "Rejected by collector.",
+      },
+    });
+
+    return {
+      debtorPhone: proof.debtorFriend?.phone ?? proof.expenseShare?.friend.phone ?? null,
+      expenseDescription: proof.expenseShare?.expense.description ?? "the submitted proof",
+      amountLabel: proof.parsedAmount ? formatMoney(proof.parsedAmount) : null,
+    };
+  });
+
+  if (!rejected) {
+    redirectWithMessage("/expenses", "Payment proof is no longer reviewable.");
+  }
+
+  await notifyDebtorPaymentProofReviewed({
+    sessionId: user.whatsappSessionId,
+    debtorPhone: rejected.debtorPhone,
+    text: [
+      "Payment proof rejected.",
+      `Please check and resend the correct receipt for ${rejected.expenseDescription}${
+        rejected.amountLabel ? ` (${rejected.amountLabel})` : ""
+      }.`,
+    ].join("\n"),
+    context: `rejected proof ${proofId}`,
+  });
+
+  revalidatePath("/expenses");
+  redirect("/expenses?success=Payment proof rejected.");
+}
+
+async function notifyDebtorPaymentProofReviewed(input: {
+  sessionId: string | null;
+  debtorPhone: string | null;
+  text: string;
+  context: string;
+}) {
+  if (!input.sessionId || !input.debtorPhone) return;
+
+  try {
+    await sendOpenWaText({
+      sessionId: input.sessionId,
+      chatId: toOpenWaChatId(input.debtorPhone),
+      text: input.text,
+    });
+  } catch (error) {
+    console.error(
+      `Failed to send payment proof ${input.context} notice: ${getErrorMessage(error)}`
+    );
+  }
+}
+
 async function getExpenseSharePaidAt(shareId: string) {
   const rows = await prisma.$queryRaw<{ paidAt: Date | null }[]>`
     SELECT "paidAt" FROM "ExpenseShare" WHERE "id" = ${shareId} LIMIT 1
   `;
 
   return rows[0]?.paidAt ?? null;
+}
+
+async function hasPendingPaymentProofForShare(shareId: string) {
+  const rows = await prisma.$queryRaw<{ exists: boolean }[]>`
+    SELECT EXISTS (
+      SELECT 1
+      FROM "ExpenseShare" AS es
+      JOIN "PaymentProof" AS pp
+        ON pp."status" = 'PENDING_REVIEW'::"PaymentProofStatus"
+        AND (
+          pp."expenseShareId" = es."id"
+          OR (
+            pp."expenseShareId" IS NULL
+            AND pp."debtorFriendId" = es."friendId"
+          )
+        )
+      WHERE es."id" = ${shareId}
+    ) AS "exists"
+  `;
+
+  return rows[0]?.exists ?? false;
 }
 
 function getShareAmounts(

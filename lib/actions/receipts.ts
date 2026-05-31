@@ -7,6 +7,7 @@ import { ensureUserInDB } from "@/lib/actions/user";
 import { prisma } from "@/lib/db";
 import { normalizeMalaysianPhone } from "@/lib/friends";
 import { centsToMoneyString, parseMoneyToCents } from "@/lib/money";
+import { extractImageTextWithOcrSpace } from "@/lib/ocr-space";
 import { isProfileComplete } from "@/lib/profile";
 import {
   distributeEvenly,
@@ -36,15 +37,6 @@ type GeminiResponse = {
   error?: {
     message?: string;
   };
-};
-
-type OcrSpaceResponse = {
-  ParsedResults?: {
-    ParsedText?: string;
-  }[];
-  IsErroredOnProcessing?: boolean;
-  ErrorMessage?: string | string[];
-  ErrorDetails?: string;
 };
 
 type ReceiptSavePayload = {
@@ -171,7 +163,6 @@ export async function parseReceipt(
   }
 
   try {
-    assertOcrSpaceConfigured();
     assertGeminiConfigured();
 
     const receiptImage = getUploadedFile(formData.get("receiptImage"));
@@ -563,46 +554,13 @@ async function getOrCreateInlineFriend(
 }
 
 async function extractReceiptTextWithOcrSpace(file: File, bytes: Buffer) {
-  const apiKey = assertOcrSpaceConfigured();
-  const body = new FormData();
-  const imageBuffer = new ArrayBuffer(bytes.byteLength);
-  new Uint8Array(imageBuffer).set(bytes);
-  body.append(
-    "file",
-    new Blob([imageBuffer], { type: file.type }),
-    file.name || "receipt.jpg"
-  );
-  body.append("language", "eng");
-  body.append("isOverlayRequired", "false");
-  body.append("detectOrientation", "true");
-  body.append("OCREngine", "2");
-
-  const response = await fetch("https://api.ocr.space/parse/image", {
-    method: "POST",
-    headers: {
-      apikey: apiKey,
-    },
-    body,
+  return extractImageTextWithOcrSpace({
+    file,
+    bytes,
+    fallbackFileName: "receipt.jpg",
+    failureMessage: "OCR.space could not read this receipt.",
+    emptyTextMessage: "OCR could not find text on this receipt. Try a clearer photo.",
   });
-
-  const result = (await response.json().catch(() => null)) as OcrSpaceResponse | null;
-  if (!response.ok || !result) {
-    throw new Error("OCR.space could not read this receipt.");
-  }
-
-  if (result.IsErroredOnProcessing) {
-    throw new Error(getOcrErrorMessage(result));
-  }
-
-  const text = result.ParsedResults?.map((parsed) => parsed.ParsedText ?? "")
-    .join("\n")
-    .trim();
-
-  if (!text) {
-    throw new Error("OCR could not find text on this receipt. Try a clearer photo.");
-  }
-
-  return text;
 }
 
 async function parseReceiptTextWithGemini(ocrText: string): Promise<ParsedReceiptDraft> {
@@ -867,16 +825,6 @@ function getReceiptSplitMode(value: unknown): ReceiptSplitMode {
   throw new Error("Receipt split mode is invalid.");
 }
 
-function assertOcrSpaceConfigured() {
-  const apiKey = process.env.OCR_SPACE_API_KEY;
-
-  if (!apiKey) {
-    throw new Error("Missing OCR_SPACE_API_KEY in .env.");
-  }
-
-  return apiKey;
-}
-
 function assertGeminiConfigured() {
   const apiKey = process.env.GEMINI_API_KEY;
 
@@ -979,14 +927,6 @@ function getString(value: FormDataEntryValue | null) {
 
 function getStringValue(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
-}
-
-function getOcrErrorMessage(result: OcrSpaceResponse) {
-  const message = Array.isArray(result.ErrorMessage)
-    ? result.ErrorMessage.filter(Boolean).join(" ")
-    : result.ErrorMessage;
-
-  return message || result.ErrorDetails || "OCR.space could not read this receipt.";
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

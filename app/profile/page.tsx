@@ -119,6 +119,17 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
                 className="rounded-md border border-zinc-300 px-3 py-2 outline-none focus:border-emerald-600"
               />
             </label>
+
+            <label className="flex flex-col gap-2">
+              <span className="text-sm font-medium">DuitNow recipient name</span>
+              <input
+                name="duitNowRecipientName"
+                defaultValue={user.duitNowRecipientName ?? ""}
+                required
+                placeholder="Name shown on bank receipts"
+                className="rounded-md border border-zinc-300 px-3 py-2 outline-none focus:border-emerald-600"
+              />
+            </label>
           </div>
 
           <div className="mt-5 grid gap-5 md:grid-cols-2">

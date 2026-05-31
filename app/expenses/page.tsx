@@ -7,16 +7,19 @@ import ExpenseCreateTabs from "@/app/expenses/ExpenseCreateTabs";
 import StatusToast from "@/components/StatusToast";
 import SubmitButton from "@/components/SubmitButton";
 import {
+  confirmPaymentProof,
   deleteExpense,
   markExpenseSharePaid,
   markExpenseShareUnpaid,
   queueExpenseShareReminderNow,
+  rejectPaymentProof,
 } from "@/lib/actions/expenses";
 import { ensureUserInDB } from "@/lib/actions/user";
 import { prisma } from "@/lib/db";
 import { formatMoney } from "@/lib/money";
 import { isProfileComplete } from "@/lib/profile";
 import { getReminderStatusLabel } from "@/lib/reminders";
+import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
@@ -40,7 +43,7 @@ export default async function ExpensesPage({ searchParams }: ExpensesPageProps) 
   const user = await ensureUserInDB();
   if (!isProfileComplete(user)) redirect("/profile?next=/expenses");
 
-  const [params, friends, expenses, expenseCount] = await Promise.all([
+  const [params, friends, expenses, expenseCount, pendingProofs] = await Promise.all([
     searchParams,
     prisma.friend.findMany({
       where: { ownerId: user.id },
@@ -76,6 +79,25 @@ export default async function ExpensesPage({ searchParams }: ExpensesPageProps) 
     prisma.expense.count({
       where: { collectorId: user.id },
     }),
+    prisma.paymentProof.findMany({
+      where: {
+        collectorId: user.id,
+        status: "PENDING_REVIEW",
+      },
+      orderBy: { createdAt: "desc" },
+      take: 10,
+      include: {
+        debtorFriend: true,
+        expenseShare: {
+          include: {
+            friend: true,
+            expense: {
+              select: { description: true },
+            },
+          },
+        },
+      },
+    }),
   ]);
   const shareIds = expenses.flatMap((expense) =>
     expense.shares.map((share) => share.id)
@@ -91,6 +113,36 @@ export default async function ExpensesPage({ searchParams }: ExpensesPageProps) 
   const paidAtByShareId = new Map(
     sharePaymentStatuses.map((status) => [status.id, status.paidAt])
   );
+  const pendingProofDebtorFriendIds = pendingProofs
+    .map((proof) => proof.debtorFriendId)
+    .filter((id): id is string => Boolean(id));
+  const pendingProofCandidateShares =
+    pendingProofDebtorFriendIds.length > 0
+      ? await prisma.expenseShare.findMany({
+          where: {
+            friendId: { in: pendingProofDebtorFriendIds },
+            paidAt: null,
+            expense: { collectorId: user.id },
+          },
+          orderBy: { createdAt: "desc" },
+          include: {
+            friend: true,
+            expense: {
+              select: { description: true },
+            },
+          },
+        })
+      : [];
+  const candidateSharesByFriendId = new Map<
+    string,
+    typeof pendingProofCandidateShares
+  >();
+  for (const share of pendingProofCandidateShares) {
+    const shares = candidateSharesByFriendId.get(share.friendId) ?? [];
+    shares.push(share);
+    candidateSharesByFriendId.set(share.friendId, shares);
+  }
+  const proofImageUrlById = await getPaymentProofImageUrls(pendingProofs);
 
   return (
     <main className="min-h-screen bg-zinc-50 px-4 py-8 text-zinc-950">
@@ -118,6 +170,165 @@ export default async function ExpensesPage({ searchParams }: ExpensesPageProps) 
           collectorName={user.fullName ?? clerkUser.firstName ?? "You"}
           initialMode={params.mode === "receipt" ? "receipt" : "manual"}
         />
+
+        {pendingProofs.length > 0 ? (
+          <section className="rounded-lg border border-amber-200 bg-white p-6 shadow-sm">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h2 className="text-xl font-semibold">Payment reviews</h2>
+                <p className="text-sm text-zinc-500">
+                  Confirm only when the receipt recipient and debt look right.
+                </p>
+              </div>
+              <span className="rounded-full bg-amber-100 px-3 py-1 text-sm font-medium text-amber-800">
+                {pendingProofs.length} pending
+              </span>
+            </div>
+
+            <div className="mt-4 grid gap-4 lg:grid-cols-2">
+              {pendingProofs.map((proof) => {
+                const parsedAmountCents = proof.parsedAmount
+                  ? Math.round(Number(proof.parsedAmount.toString()) * 100)
+                  : null;
+                const candidateShares = proof.debtorFriendId
+                  ? candidateSharesByFriendId.get(proof.debtorFriendId) ?? []
+                  : [];
+                const exactAmountCandidates =
+                  parsedAmountCents === null
+                    ? candidateShares
+                    : candidateShares.filter(
+                        (share) =>
+                          Math.round(Number(share.owedAmount.toString()) * 100) ===
+                          parsedAmountCents
+                      );
+                const confirmCandidates = proof.expenseShare
+                  ? [proof.expenseShare]
+                  : exactAmountCandidates;
+                const imageUrl = proofImageUrlById.get(proof.id);
+
+                return (
+                  <article
+                    key={proof.id}
+                    className="rounded-md border border-zinc-200 bg-zinc-50 p-4"
+                  >
+                    <div className="grid gap-4 sm:grid-cols-[140px_1fr]">
+                      <div className="overflow-hidden rounded-md border border-zinc-200 bg-white">
+                        {imageUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={imageUrl}
+                            alt="Payment proof screenshot"
+                            className="h-44 w-full object-cover"
+                          />
+                        ) : (
+                          <div className="flex h-44 items-center justify-center px-3 text-center text-sm text-zinc-500">
+                            Image unavailable
+                          </div>
+                        )}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h3 className="font-semibold">
+                            {proof.debtorFriend?.name ?? "Unknown debtor"}
+                          </h3>
+                          {proof.debtorFriend ? (
+                            <span className="text-sm text-zinc-500">
+                              {proof.debtorFriend.phone}
+                            </span>
+                          ) : null}
+                        </div>
+                        <dl className="mt-3 grid gap-2 text-sm">
+                          <PaymentProofField
+                            label="Amount"
+                            value={
+                              proof.parsedAmount
+                                ? formatMoney(proof.parsedAmount)
+                                : "Not found"
+                            }
+                          />
+                          <PaymentProofField
+                            label="Recipient"
+                            value={proof.parsedRecipient ?? "Not found"}
+                          />
+                          <PaymentProofField
+                            label="Reference"
+                            value={proof.parsedTransactionReference ?? "Not found"}
+                          />
+                          <PaymentProofField
+                            label="Timestamp"
+                            value={
+                              proof.parsedTimestamp
+                                ? proofTimestampFormatter.format(proof.parsedTimestamp)
+                                : "Not found"
+                            }
+                          />
+                          <PaymentProofField
+                            label="Reason"
+                            value={proof.reviewReason ?? "Needs collector review."}
+                          />
+                        </dl>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 border-t border-zinc-200 pt-4">
+                      <p className="text-sm font-medium text-zinc-700">
+                        Suggested debt
+                      </p>
+                      {confirmCandidates.length > 0 ? (
+                        <div className="mt-2 grid gap-2">
+                          {confirmCandidates.map((share) => (
+                            <div
+                              key={share.id}
+                              className="flex flex-wrap items-center justify-between gap-3 rounded-md bg-white px-3 py-2 text-sm"
+                            >
+                              <div>
+                                <p className="font-medium">
+                                  {share.friend.name} - {formatMoney(share.owedAmount)}
+                                </p>
+                                <p className="text-zinc-500">
+                                  {share.expense.description}
+                                </p>
+                              </div>
+                              <form action={confirmPaymentProof}>
+                                <input
+                                  type="hidden"
+                                  name="paymentProofId"
+                                  value={proof.id}
+                                />
+                                <input type="hidden" name="shareId" value={share.id} />
+                                <SubmitButton
+                                  pendingLabel="Confirming..."
+                                  className="px-3 py-1 text-xs"
+                                >
+                                  Confirm
+                                </SubmitButton>
+                              </form>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="mt-2 rounded-md bg-white px-3 py-2 text-sm text-zinc-500">
+                          No exact unpaid debt candidate. Reject this proof or wait for a clearer receipt.
+                        </p>
+                      )}
+
+                      <form action={rejectPaymentProof} className="mt-3">
+                        <input type="hidden" name="paymentProofId" value={proof.id} />
+                        <SubmitButton
+                          variant="danger"
+                          pendingLabel="Rejecting..."
+                          className="px-3 py-1 text-xs"
+                        >
+                          Reject
+                        </SubmitButton>
+                      </form>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          </section>
+        ) : null}
 
         <section className="rounded-lg border border-zinc-200 bg-white p-6 shadow-sm">
           <div className="flex items-center justify-between gap-4">
@@ -300,6 +511,48 @@ const sharePaidDateFormatter = new Intl.DateTimeFormat("en-MY", {
   hour: "numeric",
   minute: "2-digit",
 });
+
+const proofTimestampFormatter = new Intl.DateTimeFormat("en-MY", {
+  timeZone: "Asia/Kuala_Lumpur",
+  day: "numeric",
+  month: "short",
+  hour: "numeric",
+  minute: "2-digit",
+});
+
+function PaymentProofField({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
+  return (
+    <div>
+      <dt className="text-xs font-medium uppercase text-zinc-500">{label}</dt>
+      <dd className="break-words text-zinc-800">{value}</dd>
+    </div>
+  );
+}
+
+async function getPaymentProofImageUrls(
+  proofs: { id: string; imageStoragePath: string }[]
+) {
+  const imageUrls = new Map<string, string>();
+  if (proofs.length === 0) return imageUrls;
+
+  const supabase = createServerSupabaseClient();
+  await Promise.all(
+    proofs.map(async (proof) => {
+      const { data } = await supabase.storage
+        .from("payment-proofs")
+        .createSignedUrl(proof.imageStoragePath, 60 * 5);
+      if (data?.signedUrl) imageUrls.set(proof.id, data.signedUrl);
+    })
+  );
+
+  return imageUrls;
+}
 
 function getWhatsAppAttemptLabel(attempt: {
   status: string;

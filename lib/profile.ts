@@ -3,6 +3,7 @@ type ProfileFields = {
   phone: string | null;
   duitNowIdType: string | null;
   duitNowIdValue: string | null;
+  duitNowRecipientName: string | null;
   duitNowQrUrl: string | null;
   whatsappLinkStatus: string | null;
 };
@@ -13,6 +14,7 @@ export function hasProfileDetails(user: Omit<ProfileFields, "whatsappLinkStatus"
       user.phone?.trim() &&
       user.duitNowIdType &&
       user.duitNowIdValue?.trim() &&
+      user.duitNowRecipientName?.trim() &&
       user.duitNowQrUrl
   );
 }
