@@ -22,7 +22,7 @@ import type {
 
 const MAX_RECEIPT_SIZE_BYTES = Math.floor(3.8 * 1024 * 1024);
 const DEFAULT_GEMINI_MODEL = "gemini-2.5-flash";
-const RECEIPT_NEXT_PATH = "/expenses?mode=receipt";
+const RECEIPT_NEXT_PATH = "/expenses/new?mode=receipt";
 
 type ReceiptSplitMode = "EQUAL_SPLIT" | "CUSTOM_AMOUNT";
 

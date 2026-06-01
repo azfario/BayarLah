@@ -92,7 +92,7 @@ export default async function DashboardPage() {
 
           <div className="flex flex-wrap items-center gap-3">
             <Link
-              href="/expenses"
+              href="/expenses/new"
               className="inline-flex items-center justify-center rounded-full bg-[#0a0a0a] px-6 py-3 text-sm font-semibold text-white"
             >
               Create expense

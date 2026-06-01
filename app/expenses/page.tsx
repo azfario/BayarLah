@@ -3,7 +3,6 @@ import { Prisma } from "@prisma/client";
 import { UserButton } from "@clerk/nextjs";
 import { currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
-import ExpenseCreateTabs from "@/app/expenses/ExpenseCreateTabs";
 import StatusToast from "@/components/StatusToast";
 import SubmitButton from "@/components/SubmitButton";
 import {
@@ -26,7 +25,6 @@ export const dynamic = "force-dynamic";
 type ExpensesPageProps = {
   searchParams: Promise<{
     error?: string;
-    mode?: string;
     success?: string;
   }>;
 };
@@ -43,13 +41,8 @@ export default async function ExpensesPage({ searchParams }: ExpensesPageProps) 
   const user = await ensureUserInDB();
   if (!isProfileComplete(user)) redirect("/profile?next=/expenses");
 
-  const [params, friends, expenses, expenseCount, pendingProofs] = await Promise.all([
+  const [params, expenses, expenseCount, pendingProofs] = await Promise.all([
     searchParams,
-    prisma.friend.findMany({
-      where: { ownerId: user.id },
-      orderBy: [{ name: "asc" }, { createdAt: "desc" }],
-      select: { id: true, name: true, phone: true },
-    }),
     prisma.expense.findMany({
       where: { collectorId: user.id },
       orderBy: { createdAt: "desc" },
@@ -147,29 +140,29 @@ export default async function ExpensesPage({ searchParams }: ExpensesPageProps) 
   return (
     <main className="min-h-screen bg-zinc-50 px-4 py-8 text-zinc-950">
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
-        <header className="flex items-center justify-between gap-4">
+        <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-sm font-medium text-emerald-700">BayarLah</p>
             <h1 className="text-3xl font-bold">Expenses</h1>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <Link href="/dashboard" className="text-sm font-medium text-zinc-600 hover:text-zinc-950">
               Dashboard
             </Link>
             <Link href="/friends" className="text-sm font-medium text-zinc-600 hover:text-zinc-950">
               Friends
             </Link>
+            <Link
+              href="/expenses/new"
+              className="inline-flex items-center justify-center rounded-md bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800"
+            >
+              Record expense
+            </Link>
             <UserButton afterSignOutUrl="/" />
           </div>
         </header>
 
         <StatusToast error={params.error} success={params.success} />
-
-        <ExpenseCreateTabs
-          friends={friends}
-          collectorName={user.fullName ?? clerkUser.firstName ?? "You"}
-          initialMode={params.mode === "receipt" ? "receipt" : "manual"}
-        />
 
         {pendingProofs.length > 0 ? (
           <section className="rounded-lg border border-amber-200 bg-white p-6 shadow-sm">
@@ -486,9 +479,15 @@ export default async function ExpensesPage({ searchParams }: ExpensesPageProps) 
               ))}
             </div>
           ) : (
-            <p className="mt-4 text-sm text-zinc-500">
-              Record your first expense to see who owes what.
-            </p>
+            <div className="mt-4 rounded-md bg-zinc-50 px-4 py-5 text-sm text-zinc-500">
+              <p>Record your first expense to see who owes what.</p>
+              <Link
+                href="/expenses/new"
+                className="mt-3 inline-flex items-center justify-center rounded-md bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800"
+              >
+                Record expense
+              </Link>
+            </div>
           )}
         </section>
       </div>

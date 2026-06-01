@@ -23,9 +23,13 @@ type InlineFriendInput = {
   owedCents: number | null;
 };
 
+const EXPENSE_CREATE_PATH = "/expenses/new";
+
 export async function createExpense(formData: FormData) {
   const user = await ensureUserInDB();
-  if (!isProfileComplete(user)) redirect("/profile?next=/expenses");
+  if (!isProfileComplete(user)) {
+    redirect(`/profile?next=${encodeURIComponent(EXPENSE_CREATE_PATH)}`);
+  }
 
   const description = getString(formData.get("description"));
   const splitMode = getSplitMode(formData.get("splitMode"));
@@ -33,13 +37,19 @@ export async function createExpense(formData: FormData) {
   const selectedFriendIds = getStringList(formData.getAll("friendIds"));
 
   if (!description || !splitMode || totalCents === null || totalCents <= 0) {
-    redirectWithMessage("/expenses", "Please enter a description and total paid amount.");
+    redirectWithMessage(
+      EXPENSE_CREATE_PATH,
+      "Please enter a description and total paid amount."
+    );
   }
 
   const inlineFriendInputs = getInlineFriendInputs(formData, splitMode);
 
   if (selectedFriendIds.length === 0 && inlineFriendInputs.length === 0) {
-    redirectWithMessage("/expenses", "Please select or add at least one friend.");
+    redirectWithMessage(
+      EXPENSE_CREATE_PATH,
+      "Please select or add at least one friend."
+    );
   }
 
   const reminderSchedule = getReminderScheduleOrRedirect(formData);
@@ -54,13 +64,13 @@ export async function createExpense(formData: FormData) {
   const ownedFriendIds = friends.map((friend) => friend.id);
 
   if (ownedFriendIds.length !== selectedFriendIds.length) {
-    redirectWithMessage("/expenses", "Please choose friends from your own list.");
+    redirectWithMessage(EXPENSE_CREATE_PATH, "Please choose friends from your own list.");
   }
 
   const selectedPhones = new Set(friends.map((friend) => friend.phone));
   if (inlineFriendInputs.some((friend) => selectedPhones.has(friend.phone))) {
     redirectWithMessage(
-      "/expenses",
+      EXPENSE_CREATE_PATH,
       "One inline friend is already selected from your saved friends."
     );
   }
@@ -524,7 +534,10 @@ function getShareAmounts(
 
   const collectorCents = parseMoneyToCents(formData.get("collectorAmount"));
   if (collectorCents === null || collectorCents < 0) {
-    redirectWithMessage("/expenses", "Please enter your own amount for custom split.");
+    redirectWithMessage(
+      EXPENSE_CREATE_PATH,
+      "Please enter your own amount for custom split."
+    );
   }
 
   const friendCentsById = new Map<string, number>();
@@ -538,7 +551,10 @@ function getShareAmounts(
       : parseMoneyToCents(formData.get(`owedAmount:${friendId}`));
 
     if (owedCents === null || owedCents <= 0) {
-      redirectWithMessage("/expenses", "Please enter an amount for each selected friend.");
+      redirectWithMessage(
+        EXPENSE_CREATE_PATH,
+        "Please enter an amount for each selected friend."
+      );
     }
 
     friendCentsById.set(friendId, owedCents);
@@ -563,12 +579,18 @@ function getInlineFriendInputs(
     if (!name && !rawPhone && !rawOwed) continue;
 
     if (!name || !rawPhone) {
-      redirectWithMessage("/expenses", "Please enter both name and phone for each new friend.");
+      redirectWithMessage(
+        EXPENSE_CREATE_PATH,
+        "Please enter both name and phone for each new friend."
+      );
     }
 
     const phone = normalizeMalaysianPhone(rawPhone);
     if (phones.has(phone)) {
-      redirectWithMessage("/expenses", "Each new inline friend needs a unique phone number.");
+      redirectWithMessage(
+        EXPENSE_CREATE_PATH,
+        "Each new inline friend needs a unique phone number."
+      );
     }
 
     const owedCents =
@@ -577,7 +599,10 @@ function getInlineFriendInputs(
         : null;
 
     if (splitMode === "CUSTOM_AMOUNT" && (!owedCents || owedCents <= 0)) {
-      redirectWithMessage("/expenses", "Please enter an amount for each new friend.");
+      redirectWithMessage(
+        EXPENSE_CREATE_PATH,
+        "Please enter an amount for each new friend."
+      );
     }
 
     phones.add(phone);
@@ -628,7 +653,7 @@ function getReminderScheduleOrRedirect(formData: FormData) {
   try {
     return parseReminderScheduleFromFormData(formData);
   } catch (error) {
-    redirectWithMessage("/expenses", getErrorMessage(error));
+    redirectWithMessage(EXPENSE_CREATE_PATH, getErrorMessage(error));
   }
 }
 
