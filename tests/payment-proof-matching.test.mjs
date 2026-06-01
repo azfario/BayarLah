@@ -80,3 +80,26 @@ test("rejects duplicate transaction references", () => {
   assert.equal(decision.status, "DUPLICATE_REJECTED");
   assert.equal(decision.rejectedReason, "Duplicate transaction reference.");
 });
+
+test("keeps unresolved debtor identity pending review", () => {
+  const decision = decidePaymentProofMatch({
+    ...baseInput,
+    debtorIdentityReviewReason: "Could not resolve debtor identity.",
+  });
+
+  assert.equal(decision.status, "PENDING_REVIEW");
+  assert.equal(decision.expenseShareId, null);
+  assert.equal(decision.reviewReason, "Could not resolve debtor identity.");
+});
+
+test("can auto-confirm without a transaction reference when parser has no confidence notes", () => {
+  const decision = decidePaymentProofMatch({
+    ...baseInput,
+    transactionReference: "",
+    isDuplicateTransactionReference: false,
+    confidenceNotes: [],
+  });
+
+  assert.equal(decision.status, "AUTO_CONFIRMED");
+  assert.equal(decision.expenseShareId, "share_1");
+});

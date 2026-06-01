@@ -7,7 +7,11 @@ import { decidePaymentProofMatch } from "./payment-proof-match-rules.ts";
 
 export type CreatePaymentProofMatchInput = {
   collectorId: string;
-  debtorPhone: string;
+  debtorPhone?: string | null;
+  inboundChatId?: string | null;
+  inboundSenderId?: string | null;
+  messageId: string;
+  receiptProvider?: string | null;
   imageStoragePath: string;
   imageHash: string;
   parsedAmountCents: number | null;
@@ -45,18 +49,18 @@ export async function createMatchedPaymentProof(input: CreatePaymentProofMatchIn
       throw new Error("Collector not found.");
     }
 
-    const debtorFriend = await tx.friend.findFirst({
-      where: {
-        ownerId: collector.id,
-        phone: normalizeMalaysianPhone(input.debtorPhone),
-      },
-      select: { id: true },
+    const resolvedDebtor = await resolveDebtorFriend(tx, {
+      collectorId: collector.id,
+      debtorPhone: input.debtorPhone,
+      inboundChatId: input.inboundChatId,
+      inboundSenderId: input.inboundSenderId,
+      messageId: input.messageId,
     });
 
-    const openShares = debtorFriend
+    const openShares = resolvedDebtor.friendId
       ? await tx.expenseShare.findMany({
           where: {
-            friendId: debtorFriend.id,
+            friendId: resolvedDebtor.friendId,
             paidAt: null,
             expense: { collectorId: collector.id },
           },
@@ -74,6 +78,7 @@ export async function createMatchedPaymentProof(input: CreatePaymentProofMatchIn
         id: share.id,
         owedAmountCents: decimalToCents(share.owedAmount),
       })),
+      debtorIdentityReviewReason: resolvedDebtor.reviewReason,
       isDuplicateImage: Boolean(duplicate?.imageHash),
       isDuplicateTransactionReference: Boolean(
         input.parsedTransactionReference &&
@@ -89,7 +94,7 @@ export async function createMatchedPaymentProof(input: CreatePaymentProofMatchIn
     const paymentProof = await tx.paymentProof.create({
       data: {
         collectorId: collector.id,
-        debtorFriendId: debtorFriend?.id ?? null,
+        debtorFriendId: resolvedDebtor.friendId,
         expenseShareId: decision.expenseShareId,
         status: decision.status,
         imageStoragePath: input.imageStoragePath,
@@ -108,6 +113,15 @@ export async function createMatchedPaymentProof(input: CreatePaymentProofMatchIn
       },
       select: { id: true },
     });
+    await tx.$executeRaw`
+      UPDATE "PaymentProof"
+      SET
+        "receiptProvider" = ${input.receiptProvider || null},
+        "inboundMessageId" = ${input.messageId || null},
+        "inboundChatId" = ${input.inboundChatId || null},
+        "inboundSenderId" = ${input.inboundSenderId || null}
+      WHERE "id" = ${paymentProof.id}
+    `;
 
     if (decision.status === "AUTO_CONFIRMED" && decision.expenseShareId) {
       const paidAt = new Date();
@@ -125,6 +139,107 @@ export async function createMatchedPaymentProof(input: CreatePaymentProofMatchIn
   });
 }
 
+async function resolveDebtorFriend(
+  tx: Prisma.TransactionClient,
+  input: {
+    collectorId: string;
+    debtorPhone?: string | null;
+    inboundChatId?: string | null;
+    inboundSenderId?: string | null;
+    messageId: string;
+  }
+) {
+  const phone = getRealPhone(input.debtorPhone);
+  if (phone) {
+    const phoneMatches = await tx.friend.findMany({
+      where: {
+        ownerId: input.collectorId,
+        phone: normalizeMalaysianPhone(phone),
+      },
+      select: { id: true },
+    });
+    const friendIds = uniqueValues(phoneMatches.map((friend) => friend.id));
+    if (friendIds.length === 1) {
+      return { friendId: friendIds[0], reviewReason: null };
+    }
+    if (friendIds.length > 1) {
+      return {
+        friendId: null,
+        reviewReason: "Multiple debtor identities match the inbound phone.",
+      };
+    }
+  }
+
+  const identityKeys = getInboundIdentityKeys([
+    input.inboundChatId,
+    input.inboundSenderId,
+    input.messageId,
+  ]);
+  if (identityKeys.length === 0) {
+    return { friendId: null, reviewReason: "Could not resolve debtor identity." };
+  }
+
+  const attemptRows = await tx.$queryRaw<{ friendId: string }[]>`
+    SELECT es."friendId"
+    FROM "WhatsappReminderAttempt" AS wra
+    JOIN "ExpenseShare" AS es
+      ON es."id" = wra."expenseShareId"
+    JOIN "Expense" AS e
+      ON e."id" = es."expenseId"
+    WHERE wra."status" = 'SENT'::"WhatsappReminderAttemptStatus"
+      AND e."collectorId" = ${input.collectorId}
+      AND (
+        wra."whatsappChatId" IN (${Prisma.join(identityKeys)})
+        OR wra."whatsappLidChatId" IN (${Prisma.join(identityKeys)})
+        OR wra."providerMessageId" IN (${Prisma.join(identityKeys)})
+      )
+    ORDER BY wra."createdAt" DESC
+  `;
+  const friendIds = uniqueValues(attemptRows.map((attempt) => attempt.friendId));
+
+  if (friendIds.length === 1) {
+    return { friendId: friendIds[0], reviewReason: null };
+  }
+  if (friendIds.length > 1) {
+    return {
+      friendId: null,
+      reviewReason: "Multiple debtor identities match the inbound WhatsApp thread.",
+    };
+  }
+
+  return { friendId: null, reviewReason: "Could not resolve debtor identity." };
+}
+
 function decimalToCents(value: Prisma.Decimal) {
   return Math.round(Number(value.toString()) * 100);
+}
+
+function getRealPhone(value: string | null | undefined) {
+  if (!value || value.includes("@lid")) return null;
+
+  const digits = value.split("@")[0]?.replace(/\D/g, "") ?? "";
+  return digits ? `+${digits}` : null;
+}
+
+function getInboundIdentityKeys(values: Array<string | null | undefined>) {
+  const keys = new Set<string>();
+
+  for (const value of values) {
+    if (!value) continue;
+    keys.add(value);
+
+    const chatId = extractOpenWaSerializedChatId(value);
+    if (chatId) keys.add(chatId);
+  }
+
+  return [...keys].filter(Boolean);
+}
+
+function extractOpenWaSerializedChatId(value: string) {
+  const match = value.match(/(?:true|false)_([^_]+@(?:lid|c\.us))/i);
+  return match?.[1] ?? null;
+}
+
+function uniqueValues(values: string[]) {
+  return [...new Set(values.filter(Boolean))];
 }

@@ -14,6 +14,8 @@ test("handles a fake inbound image event through OCR parsing and matching", asyn
     {
       collectorId: "collector_1",
       debtorPhone: "+60123456789",
+      inboundChatId: "60123456789@c.us",
+      inboundSenderId: "60123456789@c.us",
       messageId: "message_1",
       bytes,
       contentType: "image/jpeg",
@@ -32,7 +34,13 @@ Reference No: MBB123456789
 Transaction Date: 31/05/2026 09:41 PM
       `,
       createMatchedProof: async (input) => {
-        calls.push(["match", input.parsedAmountCents, input.parsedRecipient]);
+        calls.push([
+          "match",
+          input.parsedAmountCents,
+          input.parsedRecipient,
+          input.receiptProvider,
+          input.inboundChatId,
+        ]);
         return {
           decision: {
             status: "AUTO_CONFIRMED",
@@ -48,7 +56,13 @@ Transaction Date: 31/05/2026 09:41 PM
 
   assert.equal(calls[0][0], "upload");
   assert.equal(calls[0][1], hashPaymentProofImage(bytes));
-  assert.deepEqual(calls[1], ["match", 5000, "BAYARLAH COLLECTOR"]);
+  assert.deepEqual(calls[1], [
+    "match",
+    5000,
+    "BAYARLAH COLLECTOR",
+    "GENERIC_BANK",
+    "60123456789@c.us",
+  ]);
   assert.equal(result.decision.status, "AUTO_CONFIRMED");
   assert.equal(result.paymentProofId, "proof_1");
 });

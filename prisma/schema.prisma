@@ -156,10 +156,14 @@ model PaymentProof {
   imageStoragePath           String
   imageHash                  String             @unique
   parsedTransactionReference String?            @unique
+  receiptProvider            String?
   parsedAmount               Decimal?           @db.Decimal(10, 2)
   parsedRecipient            String?
   parsedTimestamp            DateTime?
   rawOcrText                 String?            @db.Text
+  inboundMessageId           String?
+  inboundChatId              String?
+  inboundSenderId            String?
   reviewReason               String?            @db.Text
   reviewedAt                 DateTime?
   rejectedReason             String?            @db.Text
@@ -177,6 +181,8 @@ model WhatsappReminderAttempt {
   expenseShare      ExpenseShare                  @relation(fields: [expenseShareId], references: [id], onDelete: Cascade)
   status            WhatsappReminderAttemptStatus @default(PENDING)
   recipientPhone    String
+  whatsappChatId    String?
+  whatsappLidChatId String?
   messageText       String                        @db.Text
   duitNowQrUrl      String
   providerMessageId String?

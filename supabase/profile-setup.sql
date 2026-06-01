@@ -208,6 +208,8 @@ CREATE TABLE IF NOT EXISTS "WhatsappReminderAttempt" (
   "expenseShareId" TEXT NOT NULL,
   "status" "WhatsappReminderAttemptStatus" NOT NULL DEFAULT 'PENDING',
   "recipientPhone" TEXT NOT NULL,
+  "whatsappChatId" TEXT,
+  "whatsappLidChatId" TEXT,
   "messageText" TEXT NOT NULL,
   "duitNowQrUrl" TEXT NOT NULL,
   "providerMessageId" TEXT,
@@ -222,6 +224,8 @@ CREATE TABLE IF NOT EXISTS "WhatsappReminderAttempt" (
 
 CREATE INDEX IF NOT EXISTS "WhatsappReminderAttempt_expenseShareId_idx" ON "WhatsappReminderAttempt"("expenseShareId");
 CREATE INDEX IF NOT EXISTS "WhatsappReminderAttempt_status_createdAt_idx" ON "WhatsappReminderAttempt"("status", "createdAt");
+ALTER TABLE "WhatsappReminderAttempt" ADD COLUMN IF NOT EXISTS "whatsappChatId" TEXT;
+ALTER TABLE "WhatsappReminderAttempt" ADD COLUMN IF NOT EXISTS "whatsappLidChatId" TEXT;
 
 CREATE TABLE IF NOT EXISTS "ReceiptItem" (
   "id" TEXT NOT NULL,
@@ -264,10 +268,14 @@ CREATE TABLE IF NOT EXISTS "PaymentProof" (
   "imageStoragePath" TEXT NOT NULL,
   "imageHash" TEXT NOT NULL,
   "parsedTransactionReference" TEXT,
+  "receiptProvider" TEXT,
   "parsedAmount" DECIMAL(10,2),
   "parsedRecipient" TEXT,
   "parsedTimestamp" TIMESTAMP(3),
   "rawOcrText" TEXT,
+  "inboundMessageId" TEXT,
+  "inboundChatId" TEXT,
+  "inboundSenderId" TEXT,
   "reviewReason" TEXT,
   "reviewedAt" TIMESTAMP(3),
   "rejectedReason" TEXT,
@@ -285,6 +293,10 @@ CREATE UNIQUE INDEX IF NOT EXISTS "PaymentProof_parsedTransactionReference_key" 
 CREATE INDEX IF NOT EXISTS "PaymentProof_collectorId_status_idx" ON "PaymentProof"("collectorId", "status");
 CREATE INDEX IF NOT EXISTS "PaymentProof_debtorFriendId_idx" ON "PaymentProof"("debtorFriendId");
 CREATE INDEX IF NOT EXISTS "PaymentProof_expenseShareId_idx" ON "PaymentProof"("expenseShareId");
+ALTER TABLE "PaymentProof" ADD COLUMN IF NOT EXISTS "receiptProvider" TEXT;
+ALTER TABLE "PaymentProof" ADD COLUMN IF NOT EXISTS "inboundMessageId" TEXT;
+ALTER TABLE "PaymentProof" ADD COLUMN IF NOT EXISTS "inboundChatId" TEXT;
+ALTER TABLE "PaymentProof" ADD COLUMN IF NOT EXISTS "inboundSenderId" TEXT;
 
 INSERT INTO storage.buckets (
   id,

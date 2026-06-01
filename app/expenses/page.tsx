@@ -109,11 +109,17 @@ export default async function ExpensesPage({ searchParams }: ExpensesPageProps) 
   const pendingProofDebtorFriendIds = pendingProofs
     .map((proof) => proof.debtorFriendId)
     .filter((id): id is string => Boolean(id));
+  const needsCollectorWideProofCandidates = pendingProofs.some(
+    (proof) => !proof.debtorFriendId
+  );
   const pendingProofCandidateShares =
-    pendingProofDebtorFriendIds.length > 0
+    pendingProofs.length > 0 &&
+    (needsCollectorWideProofCandidates || pendingProofDebtorFriendIds.length > 0)
       ? await prisma.expenseShare.findMany({
           where: {
-            friendId: { in: pendingProofDebtorFriendIds },
+            ...(needsCollectorWideProofCandidates
+              ? {}
+              : { friendId: { in: pendingProofDebtorFriendIds } }),
             paidAt: null,
             expense: { collectorId: user.id },
           },
@@ -185,7 +191,9 @@ export default async function ExpensesPage({ searchParams }: ExpensesPageProps) 
                   : null;
                 const candidateShares = proof.debtorFriendId
                   ? candidateSharesByFriendId.get(proof.debtorFriendId) ?? []
-                  : [];
+                  : parsedAmountCents === null
+                    ? []
+                    : pendingProofCandidateShares;
                 const exactAmountCandidates =
                   parsedAmountCents === null
                     ? candidateShares

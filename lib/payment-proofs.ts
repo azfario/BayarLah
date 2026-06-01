@@ -1,4 +1,5 @@
 export type BankReceiptParseResult = {
+  provider: "TNG_EWALLET" | "GENERIC_BANK";
   amountCents: number | null;
   recipientText: string;
   transactionReference: string;
@@ -15,6 +16,16 @@ const REFERENCE_LABEL_PATTERN =
   /\b(ref(?:erence)? no|transaction id|transaction ref|receipt no|duitnow ref|payment ref|reference|rrn)\b/i;
 const TIMESTAMP_LABEL_PATTERN =
   /\b(transaction date|payment date|transfer date|date\/time|date|time|when)\b/i;
+const TNG_BRAND_PATTERN = /\b(touch\s*['’]?\s*n\s*go\s+ewallet|tng\s+ewallet)\b/i;
+const TNG_TRANSFER_PATTERN = /\btransferred\b/i;
+const TNG_FIELD_PATTERN = /\b(receiver|remark|wallet ref(?:erence)?)\b/i;
+const TNG_RECIPIENT_LABEL_PATTERN =
+  /\b(transfer to|receiver|recipient|payment details|remark)\b/i;
+const TNG_REFERENCE_LABEL_PATTERN =
+  /\b(transaction no\.?|wallet ref(?:erence)?|reference no\.?)\b/i;
+const TNG_TIMESTAMP_LABEL_PATTERN = /\b(date\s*\/\s*time|date\s*&\s*time)\b/i;
+const TNG_FOOTER_PATTERN =
+  /\b(get up to|claim now|terms and conditions|need help|powered by|learn more|invite friends)\b/i;
 
 export function parseBankReceiptOcrText(ocrText: string): BankReceiptParseResult {
   const rawOcrText = ocrText.trim();
@@ -22,6 +33,12 @@ export function parseBankReceiptOcrText(ocrText: string): BankReceiptParseResult
     .split(/\r?\n/)
     .map((line) => line.replace(/\s+/g, " ").trim())
     .filter(Boolean);
+  const provider = isTngReceipt(rawOcrText) ? "TNG_EWALLET" : "GENERIC_BANK";
+
+  if (provider === "TNG_EWALLET") {
+    return parseTngReceipt(rawOcrText, lines);
+  }
+
   const amountCents = extractAmountCents(lines);
   const recipientText = extractLabeledValue(lines, RECIPIENT_LABEL_PATTERN);
   const transactionReference = extractLabeledValue(lines, REFERENCE_LABEL_PATTERN);
@@ -35,6 +52,7 @@ export function parseBankReceiptOcrText(ocrText: string): BankReceiptParseResult
   });
 
   return {
+    provider,
     amountCents,
     recipientText,
     transactionReference,
@@ -42,6 +60,47 @@ export function parseBankReceiptOcrText(ocrText: string): BankReceiptParseResult
     rawOcrText,
     confidenceNotes,
   };
+}
+
+function parseTngReceipt(rawOcrText: string, lines: string[]): BankReceiptParseResult {
+  const coreLines = trimTngFooter(lines);
+  const amountCents = extractTngAmountCents(coreLines);
+  const recipientText = extractTngRecipientText(coreLines);
+  const transactionReference = extractLabeledValue(
+    coreLines,
+    TNG_REFERENCE_LABEL_PATTERN
+  );
+  const timestampText = extractTngTimestampText(coreLines);
+  const confidenceNotes = getConfidenceNotes({
+    rawOcrText,
+    amountCents,
+    recipientText,
+    transactionReference,
+    timestampText,
+    requireTransactionReference: false,
+  });
+
+  return {
+    provider: "TNG_EWALLET",
+    amountCents,
+    recipientText,
+    transactionReference,
+    timestampText,
+    rawOcrText,
+    confidenceNotes,
+  };
+}
+
+function isTngReceipt(rawOcrText: string) {
+  return (
+    TNG_BRAND_PATTERN.test(rawOcrText) ||
+    (TNG_TRANSFER_PATTERN.test(rawOcrText) && TNG_FIELD_PATTERN.test(rawOcrText))
+  );
+}
+
+function trimTngFooter(lines: string[]) {
+  const footerIndex = lines.findIndex((line) => TNG_FOOTER_PATTERN.test(line));
+  return footerIndex === -1 ? lines : lines.slice(0, footerIndex);
 }
 
 function extractAmountCents(lines: string[]) {
@@ -65,6 +124,47 @@ function getLineAmountCents(line: string) {
   if (!Number.isFinite(amount) || amount <= 0) return null;
 
   return Math.round(amount * 100);
+}
+
+function extractTngAmountCents(lines: string[]) {
+  for (const line of lines) {
+    const match = line.match(/(?:^|\s)-?\s*RM\s*([0-9][0-9,]*(?:\.\d{2})?)/i);
+    if (!match) continue;
+
+    const amount = Number(match[1]?.replace(/,/g, ""));
+    if (Number.isFinite(amount) && amount > 0) return Math.round(amount * 100);
+  }
+
+  return extractAmountCents(lines);
+}
+
+function extractTngRecipientText(lines: string[]) {
+  const values: string[] = [];
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index];
+    if (!TNG_RECIPIENT_LABEL_PATTERN.test(line)) continue;
+
+    const inlineValue = stripLabel(line, TNG_RECIPIENT_LABEL_PATTERN);
+    if (inlineValue && !looksLikeTngLabelOnly(inlineValue)) {
+      values.push(inlineValue);
+      continue;
+    }
+
+    const nextLine = lines[index + 1];
+    if (nextLine && !looksLikeTngLabelOnly(nextLine)) {
+      values.push(nextLine);
+    }
+  }
+
+  return [...new Set(values)].join(" ");
+}
+
+function extractTngTimestampText(lines: string[]) {
+  const labeledTimestamp = extractLabeledValue(lines, TNG_TIMESTAMP_LABEL_PATTERN);
+  if (labeledTimestamp && DATE_PATTERN.test(labeledTimestamp)) return labeledTimestamp;
+
+  return extractTimestampText(lines);
 }
 
 function extractLabeledValue(lines: string[], labelPattern: RegExp) {
@@ -109,18 +209,31 @@ function looksLikeLabelOnly(line: string) {
   );
 }
 
+function looksLikeTngLabelOnly(line: string) {
+  return (
+    looksLikeLabelOnly(line) ||
+    TNG_RECIPIENT_LABEL_PATTERN.test(line) ||
+    TNG_REFERENCE_LABEL_PATTERN.test(line) ||
+    TNG_TIMESTAMP_LABEL_PATTERN.test(line) ||
+    TNG_FOOTER_PATTERN.test(line) ||
+    /^-?\s*RM\s*[0-9]/i.test(line)
+  );
+}
+
 function getConfidenceNotes({
   rawOcrText,
   amountCents,
   recipientText,
   transactionReference,
   timestampText,
+  requireTransactionReference = true,
 }: {
   rawOcrText: string;
   amountCents: number | null;
   recipientText: string;
   transactionReference: string;
   timestampText: string;
+  requireTransactionReference?: boolean;
 }) {
   const notes: string[] = [];
 
@@ -136,7 +249,7 @@ function getConfidenceNotes({
     notes.push("Missing recipient text.");
   }
 
-  if (!transactionReference) {
+  if (requireTransactionReference && !transactionReference) {
     notes.push("Missing transaction reference.");
   }
 

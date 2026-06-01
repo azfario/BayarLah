@@ -44,6 +44,7 @@ export type OpenWaInboundMessage = {
   mimeType?: string | null;
   timestamp?: string | number | null;
   fromMe?: boolean | null;
+  direction?: string | null;
   hasMedia?: boolean | null;
   mediaUrl?: string | null;
   url?: string | null;

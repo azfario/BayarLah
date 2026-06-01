@@ -7,7 +7,9 @@ import { parseBankReceiptOcrText } from "./payment-proofs.ts";
 
 type HandleInboundPaymentProofImageInput = {
   collectorId: string;
-  debtorPhone: string;
+  debtorPhone?: string | null;
+  inboundChatId?: string | null;
+  inboundSenderId?: string | null;
   messageId: string;
   bytes: Buffer;
   contentType: string;
@@ -16,7 +18,7 @@ type HandleInboundPaymentProofImageInput = {
 type PaymentProofImageDeps = {
   uploadImage?: (input: {
     collectorId: string;
-    debtorPhone: string;
+    debtorPhone?: string | null;
     imageHash: string;
     messageId: string;
     bytes: Buffer;
@@ -58,6 +60,10 @@ export async function handleInboundPaymentProofImage(
   return createMatchedProof({
     collectorId: input.collectorId,
     debtorPhone: input.debtorPhone,
+    inboundChatId: input.inboundChatId,
+    inboundSenderId: input.inboundSenderId,
+    messageId: input.messageId,
+    receiptProvider: parsed.provider,
     imageStoragePath,
     imageHash,
     parsedAmountCents: parsed.amountCents,
@@ -75,7 +81,7 @@ export function hashPaymentProofImage(bytes: Buffer) {
 
 function uploadPaymentProofImage(input: {
   collectorId: string;
-  debtorPhone: string;
+  debtorPhone?: string | null;
   imageHash: string;
   messageId: string;
   bytes: Buffer;
@@ -84,7 +90,7 @@ function uploadPaymentProofImage(input: {
   const supabase = createServerSupabaseClient();
   const extension = getImageExtension(input.contentType);
   const safeMessageId = input.messageId.replace(/[^a-z0-9_-]/gi, "").slice(0, 80);
-  const safeDebtorPhone = input.debtorPhone.replace(/\D/g, "") || "unknown";
+  const safeDebtorPhone = input.debtorPhone?.replace(/\D/g, "") || "unknown";
   const path = [
     input.collectorId,
     safeDebtorPhone,

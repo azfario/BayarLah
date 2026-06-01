@@ -10,6 +10,7 @@ export type PaymentProofMatchInput = {
   collectorDuitNowRecipientName: string | null;
   collectorDuitNowIdValue: string | null;
   openShares: OpenPaymentShare[];
+  debtorIdentityReviewReason?: string | null;
   isDuplicateImage: boolean;
   isDuplicateTransactionReference: boolean;
   confidenceNotes: string[];
@@ -31,6 +32,10 @@ export function decidePaymentProofMatch(
 
   if (input.isDuplicateTransactionReference) {
     return duplicateDecision("Duplicate transaction reference.");
+  }
+
+  if (input.debtorIdentityReviewReason) {
+    return pendingDecision(null, input.debtorIdentityReviewReason);
   }
 
   if (input.amountCents === null) {

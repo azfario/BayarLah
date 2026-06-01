@@ -13,10 +13,79 @@ Reference No: MBB123456789
 Transaction Date: 31/05/2026 09:41 PM
   `);
 
+  assert.equal(parsed.provider, "GENERIC_BANK");
   assert.equal(parsed.amountCents, 5000);
   assert.equal(parsed.recipientText, "AHMAD BIN ALI");
   assert.equal(parsed.transactionReference, "MBB123456789");
   assert.equal(parsed.timestampText, "31/05/2026 09:41 PM");
+  assert.deepEqual(parsed.confidenceNotes, []);
+});
+
+test("parses TNG details receipt fields", () => {
+  const parsed = parseBankReceiptOcrText(`
+Touch 'n Go eWallet
+Transferred
+-RM0.50
+Transfer To
+HASIF BIN HASSAN
+Payment Details
+BayarLah Collector
+Date/Time
+31/05/2026 09:41 PM
+Wallet Ref
+202605310001
+Transaction No.
+TNG123456789
+  `);
+
+  assert.equal(parsed.provider, "TNG_EWALLET");
+  assert.equal(parsed.amountCents, 50);
+  assert.equal(parsed.recipientText, "HASIF BIN HASSAN BayarLah Collector");
+  assert.equal(parsed.transactionReference, "202605310001");
+  assert.equal(parsed.timestampText, "31/05/2026 09:41 PM");
+  assert.deepEqual(parsed.confidenceNotes, []);
+});
+
+test("parses TNG share receipt without requiring a reference", () => {
+  const parsed = parseBankReceiptOcrText(`
+TNG eWallet
+Transferred
+RM 0.50
+Receiver
+BayarLah Collector
+Remark
+0123456789
+Date & Time
+31/05/2026 09:41 PM
+  `);
+
+  assert.equal(parsed.provider, "TNG_EWALLET");
+  assert.equal(parsed.amountCents, 50);
+  assert.equal(parsed.recipientText, "BayarLah Collector 0123456789");
+  assert.equal(parsed.transactionReference, "");
+  assert.equal(parsed.timestampText, "31/05/2026 09:41 PM");
+  assert.deepEqual(parsed.confidenceNotes, []);
+});
+
+test("parses TNG receipt before ad footer text", () => {
+  const parsed = parseBankReceiptOcrText(`
+TNG eWallet
+Transferred
+RM 0.50
+Receiver
+BayarLah Collector
+Remark
+0123456789
+Date & Time
+31/05/2026 09:41 PM
+Get up to RM10 cashback today
+Receiver
+Advertiser Name
+  `);
+
+  assert.equal(parsed.provider, "TNG_EWALLET");
+  assert.equal(parsed.amountCents, 50);
+  assert.equal(parsed.recipientText, "BayarLah Collector 0123456789");
   assert.deepEqual(parsed.confidenceNotes, []);
 });
 
