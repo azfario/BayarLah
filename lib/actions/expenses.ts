@@ -14,6 +14,7 @@ import { sendOpenWaText } from "@/lib/openwa";
 import { isProfileComplete } from "@/lib/profile";
 import { parseReminderScheduleFromFormData } from "@/lib/reminders";
 import { getNextReminderAtFromCadence, toOpenWaChatId } from "@/lib/whatsapp";
+import { getLinkedWhatsappBotSession } from "@/lib/whatsapp-bot";
 import { ensureUserInDB } from "@/lib/actions/user";
 
 type InlineFriendInput = {
@@ -386,7 +387,6 @@ export async function confirmPaymentProof(formData: FormData) {
   }
 
   await notifyDebtorPaymentProofReviewed({
-    sessionId: user.whatsappSessionId,
     debtorPhone: confirmed.debtorPhone,
     text: [
       "Payment confirmed.",
@@ -452,7 +452,6 @@ export async function rejectPaymentProof(formData: FormData) {
   }
 
   await notifyDebtorPaymentProofReviewed({
-    sessionId: user.whatsappSessionId,
     debtorPhone: rejected.debtorPhone,
     text: [
       "Payment proof rejected.",
@@ -468,16 +467,18 @@ export async function rejectPaymentProof(formData: FormData) {
 }
 
 async function notifyDebtorPaymentProofReviewed(input: {
-  sessionId: string | null;
   debtorPhone: string | null;
   text: string;
   context: string;
 }) {
-  if (!input.sessionId || !input.debtorPhone) return;
+  if (!input.debtorPhone) return;
+
+  const botSession = await getLinkedWhatsappBotSession(prisma);
+  if (!botSession?.sessionId) return;
 
   try {
     await sendOpenWaText({
-      sessionId: input.sessionId,
+      sessionId: botSession.sessionId,
       chatId: toOpenWaChatId(input.debtorPhone),
       text: input.text,
     });

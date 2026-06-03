@@ -10,6 +10,7 @@ export type CreatePaymentProofMatchInput = {
   debtorPhone?: string | null;
   inboundChatId?: string | null;
   inboundSenderId?: string | null;
+  senderSessionId?: string | null;
   messageId: string;
   receiptProvider?: string | null;
   imageStoragePath: string;
@@ -54,6 +55,7 @@ export async function createMatchedPaymentProof(input: CreatePaymentProofMatchIn
       debtorPhone: input.debtorPhone,
       inboundChatId: input.inboundChatId,
       inboundSenderId: input.inboundSenderId,
+      senderSessionId: input.senderSessionId,
       messageId: input.messageId,
     });
 
@@ -146,6 +148,7 @@ async function resolveDebtorFriend(
     debtorPhone?: string | null;
     inboundChatId?: string | null;
     inboundSenderId?: string | null;
+    senderSessionId?: string | null;
     messageId: string;
   }
 ) {
@@ -179,7 +182,25 @@ async function resolveDebtorFriend(
     return { friendId: null, reviewReason: "Could not resolve debtor identity." };
   }
 
-  const attemptRows = await tx.$queryRaw<{ friendId: string }[]>`
+  const attemptRows = input.senderSessionId
+    ? await tx.$queryRaw<{ friendId: string }[]>`
+    SELECT es."friendId"
+    FROM "WhatsappReminderAttempt" AS wra
+    JOIN "ExpenseShare" AS es
+      ON es."id" = wra."expenseShareId"
+    JOIN "Expense" AS e
+      ON e."id" = es."expenseId"
+    WHERE wra."status" = 'SENT'::"WhatsappReminderAttemptStatus"
+      AND wra."senderSessionId" = ${input.senderSessionId}
+      AND e."collectorId" = ${input.collectorId}
+      AND (
+        wra."whatsappChatId" IN (${Prisma.join(identityKeys)})
+        OR wra."whatsappLidChatId" IN (${Prisma.join(identityKeys)})
+        OR wra."providerMessageId" IN (${Prisma.join(identityKeys)})
+      )
+    ORDER BY wra."createdAt" DESC
+  `
+    : await tx.$queryRaw<{ friendId: string }[]>`
     SELECT es."friendId"
     FROM "WhatsappReminderAttempt" AS wra
     JOIN "ExpenseShare" AS es

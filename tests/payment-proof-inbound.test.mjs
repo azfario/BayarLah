@@ -16,6 +16,7 @@ test("handles a fake inbound image event through OCR parsing and matching", asyn
       debtorPhone: "+60123456789",
       inboundChatId: "60123456789@c.us",
       inboundSenderId: "60123456789@c.us",
+      senderSessionId: "bot_session_1",
       messageId: "message_1",
       bytes,
       contentType: "image/jpeg",
@@ -40,6 +41,7 @@ Transaction Date: 31/05/2026 09:41 PM
           input.parsedRecipient,
           input.receiptProvider,
           input.inboundChatId,
+          input.senderSessionId,
         ]);
         return {
           decision: {
@@ -62,6 +64,7 @@ Transaction Date: 31/05/2026 09:41 PM
     "BAYARLAH COLLECTOR",
     "GENERIC_BANK",
     "60123456789@c.us",
+    "bot_session_1",
   ]);
   assert.equal(result.decision.status, "AUTO_CONFIRMED");
   assert.equal(result.paymentProofId, "proof_1");

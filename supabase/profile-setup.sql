@@ -136,6 +136,31 @@ WHERE "whatsappLinkStatus" IS NULL;
 ALTER TABLE "User" ALTER COLUMN "whatsappLinkStatus" SET NOT NULL;
 CREATE UNIQUE INDEX IF NOT EXISTS "User_whatsappSessionId_key" ON "User"("whatsappSessionId");
 
+CREATE TABLE IF NOT EXISTS "WhatsappBotSession" (
+  "id" TEXT NOT NULL,
+  "sessionId" TEXT,
+  "status" "WhatsappLinkStatus" NOT NULL DEFAULT 'NOT_LINKED',
+  "linkedPhone" TEXT,
+  "linkedAt" TIMESTAMP(3),
+  "linkError" TEXT,
+  "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  "updatedAt" TIMESTAMP(3) NOT NULL,
+
+  CONSTRAINT "WhatsappBotSession_pkey" PRIMARY KEY ("id")
+);
+
+ALTER TABLE "WhatsappBotSession" ADD COLUMN IF NOT EXISTS "sessionId" TEXT;
+ALTER TABLE "WhatsappBotSession" ADD COLUMN IF NOT EXISTS "status" "WhatsappLinkStatus" NOT NULL DEFAULT 'NOT_LINKED';
+ALTER TABLE "WhatsappBotSession" ADD COLUMN IF NOT EXISTS "linkedPhone" TEXT;
+ALTER TABLE "WhatsappBotSession" ADD COLUMN IF NOT EXISTS "linkedAt" TIMESTAMP(3);
+ALTER TABLE "WhatsappBotSession" ADD COLUMN IF NOT EXISTS "linkError" TEXT;
+ALTER TABLE "WhatsappBotSession" ALTER COLUMN "status" SET DEFAULT 'NOT_LINKED';
+UPDATE "WhatsappBotSession"
+SET "status" = 'NOT_LINKED'
+WHERE "status" IS NULL;
+ALTER TABLE "WhatsappBotSession" ALTER COLUMN "status" SET NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS "WhatsappBotSession_sessionId_key" ON "WhatsappBotSession"("sessionId");
+
 CREATE TABLE IF NOT EXISTS "Friend" (
   "id" TEXT NOT NULL,
   "ownerId" TEXT NOT NULL,
@@ -208,6 +233,7 @@ CREATE TABLE IF NOT EXISTS "WhatsappReminderAttempt" (
   "expenseShareId" TEXT NOT NULL,
   "status" "WhatsappReminderAttemptStatus" NOT NULL DEFAULT 'PENDING',
   "recipientPhone" TEXT NOT NULL,
+  "senderSessionId" TEXT,
   "whatsappChatId" TEXT,
   "whatsappLidChatId" TEXT,
   "messageText" TEXT NOT NULL,
@@ -224,8 +250,10 @@ CREATE TABLE IF NOT EXISTS "WhatsappReminderAttempt" (
 
 CREATE INDEX IF NOT EXISTS "WhatsappReminderAttempt_expenseShareId_idx" ON "WhatsappReminderAttempt"("expenseShareId");
 CREATE INDEX IF NOT EXISTS "WhatsappReminderAttempt_status_createdAt_idx" ON "WhatsappReminderAttempt"("status", "createdAt");
+ALTER TABLE "WhatsappReminderAttempt" ADD COLUMN IF NOT EXISTS "senderSessionId" TEXT;
 ALTER TABLE "WhatsappReminderAttempt" ADD COLUMN IF NOT EXISTS "whatsappChatId" TEXT;
 ALTER TABLE "WhatsappReminderAttempt" ADD COLUMN IF NOT EXISTS "whatsappLidChatId" TEXT;
+CREATE INDEX IF NOT EXISTS "WhatsappReminderAttempt_senderSessionId_status_createdAt_idx" ON "WhatsappReminderAttempt"("senderSessionId", "status", "createdAt");
 
 CREATE TABLE IF NOT EXISTS "ReceiptItem" (
   "id" TEXT NOT NULL,

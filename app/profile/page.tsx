@@ -4,10 +4,9 @@ import { redirect } from "next/navigation";
 import { saveProfile } from "@/lib/actions/profile";
 import { ensureUserInDB } from "@/lib/actions/user";
 import { DUITNOW_ID_TYPES } from "@/lib/duitnow";
-import { hasProfileDetails, isProfileComplete } from "@/lib/profile";
+import { isProfileComplete } from "@/lib/profile";
 import StatusToast from "@/components/StatusToast";
 import SubmitButton from "@/components/SubmitButton";
-import WhatsAppLinkPanel from "@/components/WhatsAppLinkPanel";
 
 export const dynamic = "force-dynamic";
 
@@ -27,7 +26,6 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
   const params = await searchParams;
   const next = getSafeNext(params.next);
   const completed = isProfileComplete(user);
-  const profileReady = hasProfileDetails(user);
 
   return (
     <main className="min-h-screen bg-zinc-50 px-4 py-8 text-zinc-950">
@@ -180,16 +178,6 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
             </SubmitButton>
           </div>
         </form>
-
-        <WhatsAppLinkPanel
-          profileReady={profileReady}
-          redirectTo={next}
-          phone={user.phone}
-          initialStatus={user.whatsappLinkStatus}
-          initialLinkedPhone={user.whatsappLinkedPhone}
-          initialError={user.whatsappLinkError}
-          initialLinkedAt={user.whatsappLinkedAt?.toISOString() ?? null}
-        />
       </div>
     </main>
   );

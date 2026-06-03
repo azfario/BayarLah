@@ -6,9 +6,8 @@ import {
   downloadOpenWaMessageMedia,
   getOpenWaLinkedPhone,
   type OpenWaInboundMessage,
-  isOpenWaSessionConnected,
   listOpenWaMessages,
-  openWaPhonesMatch,
+  mapOpenWaSessionStatus,
   recoverOpenWaSession,
   sendOpenWaImage,
   sendOpenWaText,
@@ -20,6 +19,11 @@ import {
   getRetryReminderAt,
   toOpenWaChatId,
 } from "../../lib/whatsapp.js";
+import {
+  getLinkedWhatsappBotSession,
+  resolveWhatsappBotInboundRoute,
+  updateWhatsappBotSessionStatus,
+} from "../../lib/whatsapp-bot.js";
 
 type DueShare = Prisma.ExpenseShareGetPayload<{
   include: {
@@ -35,14 +39,16 @@ type DueShare = Prisma.ExpenseShareGetPayload<{
             duitNowIdType: true;
             duitNowIdValue: true;
             duitNowQrUrl: true;
-            whatsappLinkStatus: true;
-            whatsappSessionId: true;
           };
         };
       };
     };
   };
 }>;
+
+type ActiveBotSession = {
+  sessionId: string;
+};
 
 const prisma = new PrismaClient();
 const pollIntervalMs = getPositiveInteger(
@@ -73,8 +79,9 @@ async function main() {
   startWebhookServer();
 
   do {
-    const inboundProcessed = await processInboundPaymentProofMessages();
-    const processed = await processDueReminders();
+    const botSession = await getActiveWhatsappBotSession();
+    const inboundProcessed = await processInboundPaymentProofMessages(botSession);
+    const processed = await processDueReminders(botSession);
     if (processed > 0) {
       console.log(`Processed ${processed} due WhatsApp reminder(s).`);
     }
@@ -92,76 +99,138 @@ async function main() {
   await shutdown();
 }
 
-async function processInboundPaymentProofMessages() {
-  const collectors = await prisma.user.findMany({
-    where: {
-      whatsappLinkStatus: "LINKED",
-      whatsappSessionId: { not: null },
-    },
-    select: {
-      id: true,
-      fullName: true,
-      phone: true,
-      whatsappSessionId: true,
-    },
-  });
+async function getActiveWhatsappBotSession(): Promise<ActiveBotSession | null> {
+  const storedSession = await getLinkedWhatsappBotSession(prisma);
+  if (!storedSession?.sessionId) return null;
+
+  try {
+    const session = await recoverOpenWaSession(storedSession.sessionId);
+    const status = mapOpenWaSessionStatus(session.status);
+    const linkedPhone = getOpenWaLinkedPhone(session);
+
+    if (status !== "LINKED") {
+      await updateWhatsappBotSessionStatus(prisma, {
+        sessionId: storedSession.sessionId,
+        status,
+        linkedPhone: null,
+        linkedAt: null,
+        linkError: "BayarLah bot session is not connected.",
+      });
+      return null;
+    }
+
+    await updateWhatsappBotSessionStatus(prisma, {
+      sessionId: storedSession.sessionId,
+      status: "LINKED",
+      linkedPhone,
+      linkedAt: storedSession.linkedAt ?? new Date(),
+      linkError: null,
+    });
+
+    return { sessionId: storedSession.sessionId };
+  } catch (error) {
+    await updateWhatsappBotSessionStatus(prisma, {
+      sessionId: storedSession.sessionId,
+      status: "FAILED",
+      linkedPhone: null,
+      linkedAt: null,
+      linkError: getErrorMessage(error),
+    });
+    console.error(`BayarLah bot session check failed: ${getErrorMessage(error)}`);
+    return null;
+  }
+}
+
+async function processInboundPaymentProofMessages(
+  botSession: ActiveBotSession | null
+) {
+  if (!botSession) return 0;
+
   let processed = 0;
 
-  for (const collector of collectors) {
-    if (!collector.whatsappSessionId) continue;
+  try {
+    const messages = await listOpenWaMessages(
+      botSession.sessionId,
+      inboundMessageLimit
+    );
 
-    try {
-      const messages = await listOpenWaMessages(
-        collector.whatsappSessionId,
-        inboundMessageLimit
-      );
+    for (const message of messages) {
+      if (!isInboundImageMessage(message)) continue;
 
-      for (const message of messages) {
-        if (!isInboundImageMessage(message)) continue;
+      const messageId = getInboundMessageId(message);
+      if (!messageId || processedInboundMessageIds.has(messageId)) continue;
 
-        const messageId = getInboundMessageId(message);
-        if (!messageId || processedInboundMessageIds.has(messageId)) continue;
+      processedInboundMessageIds.add(messageId);
+      const debtorPhone = getInboundMessagePhone(message);
+      const inboundChatId = message.chatId;
+      const inboundSenderId = message.from;
+      const route = await resolveWhatsappBotInboundRoute(prisma, {
+        botSessionId: botSession.sessionId,
+        debtorPhone,
+        inboundChatId,
+        inboundSenderId,
+        messageId,
+      });
 
-        processedInboundMessageIds.add(messageId);
-        const media = await downloadOpenWaMessageMedia({
-          sessionId: collector.whatsappSessionId,
+      if (!route) {
+        await sendUnmatchedPaymentProofReply({
+          sessionId: botSession.sessionId,
+          debtorPhone,
+          inboundChatId,
+          inboundSenderId,
           messageId,
-          mediaUrl: message.mediaUrl ?? message.url,
         });
-
-        const result = await handleInboundPaymentProofImage({
-          collectorId: collector.id,
-          debtorPhone: getInboundMessagePhone(message),
-          inboundChatId: message.chatId,
-          inboundSenderId: message.from,
-          messageId,
-          bytes: media.bytes,
-          contentType: message.mimetype ?? message.mimeType ?? media.contentType,
-        });
-
-        await sendPaymentProofWorkerNotifications({
-          collector,
-          debtorPhone: getInboundMessagePhone(message),
-          inboundChatId: message.chatId,
-          inboundSenderId: message.from,
-          paymentProofId: result.paymentProofId,
-          status: result.decision.status,
-        });
-
         processed += 1;
         console.log(
-          `Inbound payment proof ${messageId} from ${
-            getInboundMessagePhone(message) ?? message.from ?? message.chatId ?? "unknown"
-          }: ${result.decision.status}.`
+          `Skipped unmatched inbound payment proof ${messageId} from ${
+            debtorPhone ?? inboundSenderId ?? inboundChatId ?? "unknown"
+          }.`
         );
+        continue;
       }
-    } catch (error) {
-      console.error(
-        `Failed inbound payment proof poll for collector ${collector.id}: ${getErrorMessage(
-          error
-        )}`
+
+      const media = await downloadOpenWaMessageMedia({
+        sessionId: botSession.sessionId,
+        messageId,
+        mediaUrl: message.mediaUrl ?? message.url,
+      });
+
+      const result = await handleInboundPaymentProofImage({
+        collectorId: route.collectorId,
+        debtorPhone: debtorPhone ?? route.debtorPhone,
+        inboundChatId,
+        inboundSenderId,
+        senderSessionId: botSession.sessionId,
+        messageId,
+        bytes: media.bytes,
+        contentType: message.mimetype ?? message.mimeType ?? media.contentType,
+      });
+
+      await sendPaymentProofWorkerNotifications({
+        botSessionId: botSession.sessionId,
+        collector: {
+          id: route.collectorId,
+          fullName: route.collectorFullName,
+          phone: route.collectorPhone,
+        },
+        debtorPhone: debtorPhone ?? route.debtorPhone,
+        inboundChatId,
+        inboundSenderId,
+        paymentProofId: result.paymentProofId,
+        status: result.decision.status,
+      });
+
+      processed += 1;
+      console.log(
+        `Inbound payment proof ${messageId} from ${
+          debtorPhone ?? inboundSenderId ?? inboundChatId ?? "unknown"
+        }: ${result.decision.status}.`
       );
     }
+  } catch (error) {
+    console.error(
+      `Failed inbound payment proof poll for BayarLah bot: ${getErrorMessage(error)}`
+    );
   }
 
   return processed;
@@ -181,34 +250,14 @@ async function processInboundPaymentProofWebhook(payload: unknown) {
     return { ok: true, skipped: "missing_session_id" };
   }
 
-  const collector = await prisma.user.findFirst({
-    where: {
-      whatsappSessionId: sessionId,
-      whatsappLinkStatus: "LINKED",
-    },
-    select: {
-      id: true,
-      fullName: true,
-      phone: true,
-      whatsappSessionId: true,
-    },
-  });
-  if (!collector) {
+  const botSession = await getActiveWhatsappBotSession();
+  if (!botSession || botSession.sessionId !== sessionId) {
     return { ok: true, skipped: "unknown_session" };
   }
 
   const debtorPhone = getWebhookDebtorPhone(payload);
   const inboundChatId = getWebhookInboundChatId(payload);
   const inboundSenderId = getWebhookInboundSenderId(payload);
-
-  const media = await getWebhookImageMedia(payload);
-  if (!media) {
-    return {
-      ok: true,
-      skipped: "no_image_media",
-      hint: "OpenWA delivered the webhook without image bytes or an image URL.",
-    };
-  }
 
   const messageId =
     getPayloadString(payload, [
@@ -224,19 +273,54 @@ async function processInboundPaymentProofWebhook(payload: unknown) {
       "message.waMessageId",
     ]) ?? `${sessionId}-${Date.now()}`;
 
-  const result = await handleInboundPaymentProofImage({
-    collectorId: collector.id,
+  const route = await resolveWhatsappBotInboundRoute(prisma, {
+    botSessionId: botSession.sessionId,
     debtorPhone,
     inboundChatId,
     inboundSenderId,
+    messageId,
+  });
+
+  if (!route) {
+    await sendUnmatchedPaymentProofReply({
+      sessionId: botSession.sessionId,
+      debtorPhone,
+      inboundChatId,
+      inboundSenderId,
+      messageId,
+    });
+
+    return { ok: true, skipped: "unmatched_payment_proof" };
+  }
+
+  const media = await getWebhookImageMedia(payload);
+  if (!media) {
+    return {
+      ok: true,
+      skipped: "no_image_media",
+      hint: "OpenWA delivered the webhook without image bytes or an image URL.",
+    };
+  }
+
+  const result = await handleInboundPaymentProofImage({
+    collectorId: route.collectorId,
+    debtorPhone: debtorPhone ?? route.debtorPhone,
+    inboundChatId,
+    inboundSenderId,
+    senderSessionId: botSession.sessionId,
     messageId,
     bytes: media.bytes,
     contentType: media.contentType,
   });
 
   await sendPaymentProofWorkerNotifications({
-    collector,
-    debtorPhone,
+    botSessionId: botSession.sessionId,
+    collector: {
+      id: route.collectorId,
+      fullName: route.collectorFullName,
+      phone: route.collectorPhone,
+    },
+    debtorPhone: debtorPhone ?? route.debtorPhone,
     inboundChatId,
     inboundSenderId,
     paymentProofId: result.paymentProofId,
@@ -257,7 +341,7 @@ async function processInboundPaymentProofWebhook(payload: unknown) {
   };
 }
 
-async function processDueReminders() {
+async function processDueReminders(botSession: ActiveBotSession | null) {
   const now = new Date();
   const dueShareRows = await prisma.$queryRaw<{ id: string }[]>`
     SELECT "id"
@@ -285,6 +369,10 @@ async function processDueReminders() {
   const dueShareIds = dueShareRows.map((share) => share.id);
 
   if (dueShareIds.length === 0) return 0;
+  if (!botSession) {
+    console.error("BayarLah bot session is not linked; skipping due reminders.");
+    return 0;
+  }
 
   const dueShares = await prisma.expenseShare.findMany({
     where: {
@@ -305,8 +393,6 @@ async function processDueReminders() {
               duitNowIdType: true,
               duitNowIdValue: true,
               duitNowQrUrl: true,
-              whatsappLinkStatus: true,
-              whatsappSessionId: true,
             },
           },
         },
@@ -318,13 +404,13 @@ async function processDueReminders() {
   for (const { id } of dueShareRows) {
     const share = dueShareById.get(id);
     if (!share) continue;
-    await sendReminder(share);
+    await sendReminder(share, botSession);
   }
 
   return dueShares.length;
 }
 
-async function sendReminder(share: DueShare) {
+async function sendReminder(share: DueShare, botSession: ActiveBotSession) {
   if (!share.reminderFrequencyValue || !share.reminderFrequencyUnit) return;
 
   const collector = share.expense.collector;
@@ -350,7 +436,9 @@ async function sendReminder(share: DueShare) {
   });
   await prisma.$executeRaw`
     UPDATE "WhatsappReminderAttempt"
-    SET "whatsappChatId" = ${whatsappChatId}
+    SET
+      "senderSessionId" = ${botSession.sessionId},
+      "whatsappChatId" = ${whatsappChatId}
     WHERE "id" = ${attempt.id}
   `;
 
@@ -359,34 +447,8 @@ async function sendReminder(share: DueShare) {
       throw new Error("Collector DuitNow QR is missing.");
     }
 
-    if (!collector.whatsappSessionId) {
-      throw new Error("Collector WhatsApp is not linked.");
-    }
-
-    const session = await recoverOpenWaSession(collector.whatsappSessionId);
-    if (!isOpenWaSessionConnected(session)) {
-      throw new Error("Collector OpenWA session is not connected.");
-    }
-
-    const linkedPhone = getOpenWaLinkedPhone(session);
-    if (!openWaPhonesMatch(collector.phone, linkedPhone)) {
-      throw new Error(
-        `Linked WhatsApp phone ${
-          linkedPhone ?? "unknown"
-        } does not match collector phone ${collector.phone ?? "unknown"}.`
-      );
-    }
-
-    if (collector.whatsappLinkStatus !== "LINKED") {
-      await markCollectorSessionLinked(
-        collector.id,
-        collector.whatsappSessionId,
-        linkedPhone
-      );
-    }
-
     const providerResult = await sendOpenWaImage({
-      sessionId: collector.whatsappSessionId,
+      sessionId: botSession.sessionId,
       chatId: whatsappChatId,
       imageUrl: qrUrl,
       caption: messageText,
@@ -433,11 +495,11 @@ async function sendReminder(share: DueShare) {
 }
 
 async function sendPaymentProofWorkerNotifications(input: {
+  botSessionId: string;
   collector: {
     id: string;
     fullName: string | null;
     phone: string | null;
-    whatsappSessionId: string | null;
   };
   debtorPhone?: string | null;
   inboundChatId?: string | null;
@@ -445,7 +507,7 @@ async function sendPaymentProofWorkerNotifications(input: {
   paymentProofId: string | null;
   status: "PENDING_REVIEW" | "AUTO_CONFIRMED" | "DUPLICATE_REJECTED";
 }) {
-  if (!input.collector.whatsappSessionId || !input.paymentProofId) return;
+  if (!input.paymentProofId) return;
 
   const proof = await prisma.paymentProof.findUnique({
     where: { id: input.paymentProofId },
@@ -479,7 +541,7 @@ async function sendPaymentProofWorkerNotifications(input: {
 
   if (input.status === "AUTO_CONFIRMED") {
     await sendOpenWaTextSafely({
-      sessionId: input.collector.whatsappSessionId,
+      sessionId: input.botSessionId,
       phone: input.collector.phone,
       text: [
         `BayarLah auto-confirmed ${debtorName}'s payment of ${amountLabel}.`,
@@ -489,7 +551,7 @@ async function sendPaymentProofWorkerNotifications(input: {
     });
 
     await sendOpenWaTextSafely({
-      sessionId: input.collector.whatsappSessionId,
+      sessionId: input.botSessionId,
       phone: debtorPhone,
       text: [
         "Payment confirmed.",
@@ -501,7 +563,7 @@ async function sendPaymentProofWorkerNotifications(input: {
 
   if (input.status === "PENDING_REVIEW") {
     await sendOpenWaTextSafely({
-      sessionId: input.collector.whatsappSessionId,
+      sessionId: input.botSessionId,
       phone: input.collector.phone,
       text: [
         `BayarLah found a payment proof from ${debtorName} that needs review.`,
@@ -533,23 +595,48 @@ async function sendOpenWaTextSafely(input: {
   }
 }
 
-async function markCollectorSessionLinked(
-  userId: string,
-  sessionId: string,
-  linkedPhone: string | null
-) {
-  const linkedAt = new Date();
+async function sendUnmatchedPaymentProofReply(input: {
+  sessionId: string;
+  debtorPhone?: string | null;
+  inboundChatId?: string | null;
+  inboundSenderId?: string | null;
+  messageId: string;
+}) {
+  const chatId =
+    input.inboundChatId ??
+    input.inboundSenderId ??
+    (input.debtorPhone ? toOpenWaChatId(input.debtorPhone) : null);
 
-  await prisma.user.updateMany({
-    where: { id: userId, whatsappSessionId: sessionId },
-    data: {
-      whatsappLinkStatus: "LINKED",
-      whatsappLinkedPhone: linkedPhone,
-      whatsappLinkedAt: linkedAt,
-      whatsappLinkError: null,
-      profileCompletedAt: linkedAt,
-    },
+  await sendOpenWaTextToChatSafely({
+    sessionId: input.sessionId,
+    chatId,
+    text: [
+      "BayarLah could not match this receipt to a recent unpaid reminder.",
+      "Please send the receipt image in the same chat after receiving a BayarLah reminder.",
+    ].join("\n"),
+    context: `unmatched payment proof ${input.messageId}`,
   });
+}
+
+async function sendOpenWaTextToChatSafely(input: {
+  sessionId: string;
+  chatId: string | null;
+  text: string;
+  context: string;
+}) {
+  if (!input.chatId) return;
+
+  try {
+    await sendOpenWaText({
+      sessionId: input.sessionId,
+      chatId: input.chatId,
+      text: input.text,
+    });
+  } catch (error) {
+    console.error(
+      `Failed to send ${input.context}: ${getErrorMessage(error)}`
+    );
+  }
 }
 
 async function recordFailedAttempt(
