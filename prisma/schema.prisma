@@ -82,6 +82,17 @@ model User {
   paymentProofs        PaymentProof[]
 }
 
+model WhatsappBotSession {
+  id          String             @id
+  sessionId   String?            @unique
+  status      WhatsappLinkStatus @default(NOT_LINKED)
+  linkedPhone String?
+  linkedAt    DateTime?
+  linkError   String?            @db.Text
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+}
+
 model Friend {
   id                     String                  @id @default(cuid())
   ownerId                String
@@ -181,6 +192,7 @@ model WhatsappReminderAttempt {
   expenseShare      ExpenseShare                  @relation(fields: [expenseShareId], references: [id], onDelete: Cascade)
   status            WhatsappReminderAttemptStatus @default(PENDING)
   recipientPhone    String
+  senderSessionId   String?
   whatsappChatId    String?
   whatsappLidChatId String?
   messageText       String                        @db.Text
@@ -193,6 +205,7 @@ model WhatsappReminderAttempt {
 
   @@index([expenseShareId])
   @@index([status, createdAt])
+  @@index([senderSessionId, status, createdAt])
 }
 
 model ReceiptItem {

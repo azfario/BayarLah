@@ -50,13 +50,7 @@ export async function saveProfile(formData: FormData) {
   }
 
   const phoneChanged = Boolean(existingUser?.phone && existingUser.phone !== phone);
-  const nextWhatsAppStatus = phoneChanged
-    ? "NOT_LINKED"
-    : existingUser?.whatsappLinkStatus ?? "NOT_LINKED";
-  const profileCompletedAt =
-    nextWhatsAppStatus === "LINKED"
-      ? existingUser?.profileCompletedAt ?? new Date()
-      : null;
+  const profileCompletedAt = existingUser?.profileCompletedAt ?? new Date();
 
   const profilePhotoUrl = profilePhoto
     ? await uploadImage(
@@ -108,22 +102,11 @@ export async function saveProfile(formData: FormData) {
       duitNowRecipientName,
       duitNowQrUrl,
       whatsappLinkStatus: "NOT_LINKED",
-      profileCompletedAt: null,
+      profileCompletedAt,
     },
   });
 
   revalidatePath("/profile");
-
-  if (nextWhatsAppStatus !== "LINKED") {
-    redirectToProfile(
-      phoneChanged
-        ? "Profile saved. Link WhatsApp again because your phone number changed."
-        : "Profile details saved. Link WhatsApp to finish setup.",
-      redirectTo,
-      "success"
-    );
-  }
-
   redirect(redirectTo);
 }
 

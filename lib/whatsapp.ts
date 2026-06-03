@@ -43,13 +43,15 @@ export function buildWhatsAppReminderMessage({
     : "DuitNow details are attached with the QR.";
 
   return [
-    `Hi ${friendName}, this is a friendly BayarLah reminder from ${collectorName}.`,
+    `Hi ${friendName}, BayarLah is sending this reminder on behalf of ${collectorName}.`,
     "",
     `Amount owed: ${amountLabel}`,
     `Reason: ${expenseDescription}`,
     "",
     "Please pay using the DuitNow QR attached. OR send to",
     duitNowLine,
+    "",
+    "After paying, send the payment receipt image back to this chat.",
   ].join("\n");
 }
 

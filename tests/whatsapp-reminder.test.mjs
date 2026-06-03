@@ -15,13 +15,15 @@ test("builds the friendly DuitNow reminder message", () => {
   assert.equal(
     message,
     [
-      "Hi Aina, this is a friendly BayarLah reminder from Hakim.",
+      "Hi Aina, BayarLah is sending this reminder on behalf of Hakim.",
       "",
       "Amount owed: RM12.50",
       "Reason: Lunch",
       "",
       "Please pay using the DuitNow QR attached. OR send to",
       "DuitNow phone number: 0123456789",
+      "",
+      "After paying, send the payment receipt image back to this chat.",
     ].join("\n")
   );
 });

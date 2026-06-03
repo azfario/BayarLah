@@ -10,6 +10,7 @@ type HandleInboundPaymentProofImageInput = {
   debtorPhone?: string | null;
   inboundChatId?: string | null;
   inboundSenderId?: string | null;
+  senderSessionId?: string | null;
   messageId: string;
   bytes: Buffer;
   contentType: string;
@@ -62,6 +63,7 @@ export async function handleInboundPaymentProofImage(
     debtorPhone: input.debtorPhone,
     inboundChatId: input.inboundChatId,
     inboundSenderId: input.inboundSenderId,
+    senderSessionId: input.senderSessionId,
     messageId: input.messageId,
     receiptProvider: parsed.provider,
     imageStoragePath,

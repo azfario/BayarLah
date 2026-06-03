@@ -1,7 +1,13 @@
 import { Buffer } from "node:buffer";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { sendOpenWaText } from "@/lib/openwa";
 import { handleInboundPaymentProofImage } from "@/lib/payment-proof-inbound";
+import {
+  getLinkedWhatsappBotSession,
+  resolveWhatsappBotInboundRoute,
+} from "@/lib/whatsapp-bot";
+import { toOpenWaChatId } from "@/lib/whatsapp";
 
 export const dynamic = "force-dynamic";
 
@@ -30,29 +36,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: true, skipped: "missing_session_id" });
   }
 
-  const collector = await prisma.user.findFirst({
-    where: {
-      whatsappSessionId: sessionId,
-      whatsappLinkStatus: "LINKED",
-    },
-    select: { id: true },
-  });
-  if (!collector) {
+  const botSession = await getLinkedWhatsappBotSession(prisma);
+  if (!botSession?.sessionId || botSession.sessionId !== sessionId) {
     return NextResponse.json({ ok: true, skipped: "unknown_session" });
   }
 
   const debtorPhone = getDebtorPhone(payload);
   const inboundChatId = getInboundChatId(payload);
   const inboundSenderId = getInboundSenderId(payload);
-
-  const media = await getWebhookImageMedia(payload);
-  if (!media) {
-    return NextResponse.json({
-      ok: true,
-      skipped: "no_image_media",
-      hint: "OpenWA delivered the webhook, but the payload did not include image bytes or an image URL.",
-    });
-  }
 
   const messageId =
     getPayloadString(payload, [
@@ -68,11 +59,40 @@ export async function POST(request: NextRequest) {
       "message.waMessageId",
     ]) ?? `${sessionId}-${Date.now()}`;
 
-  const result = await handleInboundPaymentProofImage({
-    collectorId: collector.id,
+  const route = await resolveWhatsappBotInboundRoute(prisma, {
+    botSessionId: botSession.sessionId,
     debtorPhone,
     inboundChatId,
     inboundSenderId,
+    messageId,
+  });
+
+  if (!route) {
+    await sendUnmatchedPaymentProofReply({
+      sessionId: botSession.sessionId,
+      debtorPhone,
+      inboundChatId,
+      inboundSenderId,
+    });
+
+    return NextResponse.json({ ok: true, skipped: "unmatched_payment_proof" });
+  }
+
+  const media = await getWebhookImageMedia(payload);
+  if (!media) {
+    return NextResponse.json({
+      ok: true,
+      skipped: "no_image_media",
+      hint: "OpenWA delivered the webhook, but the payload did not include image bytes or an image URL.",
+    });
+  }
+
+  const result = await handleInboundPaymentProofImage({
+    collectorId: route.collectorId,
+    debtorPhone: debtorPhone ?? route.debtorPhone,
+    inboundChatId,
+    inboundSenderId,
+    senderSessionId: botSession.sessionId,
     messageId,
     bytes: media.bytes,
     contentType: media.contentType,
@@ -84,6 +104,29 @@ export async function POST(request: NextRequest) {
     paymentProofId: result.paymentProofId,
     reviewReason: result.decision.reviewReason,
   });
+}
+
+async function sendUnmatchedPaymentProofReply(input: {
+  sessionId: string;
+  debtorPhone?: string | null;
+  inboundChatId?: string | null;
+  inboundSenderId?: string | null;
+}) {
+  const chatId =
+    input.inboundChatId ??
+    input.inboundSenderId ??
+    (input.debtorPhone ? toOpenWaChatId(input.debtorPhone) : null);
+
+  if (!chatId) return;
+
+  await sendOpenWaText({
+    sessionId: input.sessionId,
+    chatId,
+    text: [
+      "BayarLah could not match this receipt to a recent unpaid reminder.",
+      "Please send the receipt image in the same chat after receiving a BayarLah reminder.",
+    ].join("\n"),
+  }).catch(() => undefined);
 }
 
 function isOutgoingWebhookPayload(payload: object) {
