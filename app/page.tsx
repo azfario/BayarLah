@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { UserButton } from "@clerk/nextjs";
 import { auth } from "@clerk/nextjs/server";
 import BrandLogo from "@/components/BrandLogo";
 
@@ -43,12 +44,15 @@ export default async function Home() {
 
         <div className="flex items-center gap-2 sm:gap-3">
           {userId ? (
-            <Link
-              href="/dashboard"
-              className="inline-flex items-center justify-center rounded-full bg-[#0a0a0a] px-5 py-2.5 text-sm font-semibold text-white"
-            >
-              Dashboard
-            </Link>
+            <>
+              <Link
+                href="/dashboard"
+                className="inline-flex items-center justify-center rounded-full bg-[#0a0a0a] px-5 py-2.5 text-sm font-semibold text-white"
+              >
+                Dashboard
+              </Link>
+              <UserButton />
+            </>
           ) : (
             <>
               <Link
