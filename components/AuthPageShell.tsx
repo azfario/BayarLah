@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import BrandLogo from "@/components/BrandLogo";
 
 export const bayarlahAuthAppearance = {
   layout: {
@@ -75,12 +76,7 @@ export default function AuthPageShell({
     <main className="min-h-screen bg-white text-[#0a0a0a]">
       <div className="mx-auto grid min-h-screen w-full max-w-7xl gap-8 px-4 py-6 sm:px-6 lg:grid-cols-[minmax(320px,0.9fr)_minmax(360px,1fr)] lg:px-8">
         <section className="hidden rounded-[32px] bg-[#0a0a0a] p-8 text-white lg:flex lg:flex-col lg:justify-between">
-          <Link href="/" className="flex items-center gap-3 text-sm font-semibold">
-            <span className="grid h-10 w-10 place-items-center rounded-full bg-white text-[#0a0a0a]">
-              B
-            </span>
-            <span>BayarLah</span>
-          </Link>
+          <BrandLogo className="text-sm" inverted size={40} />
 
           <div>
             <p className="mb-5 inline-flex rounded-full bg-white/10 px-4 py-1.5 text-sm font-semibold text-white">
@@ -112,12 +108,7 @@ export default function AuthPageShell({
 
         <section className="flex min-h-full flex-col">
           <header className="flex items-center justify-between lg:hidden">
-            <Link href="/" className="flex items-center gap-3 text-sm font-semibold">
-              <span className="grid h-9 w-9 place-items-center rounded-full bg-[#0a0a0a] text-white">
-                B
-              </span>
-              <span>BayarLah</span>
-            </Link>
+            <BrandLogo className="text-sm" />
             <Link
               href={alternate.href}
               className="rounded-full border border-[#e5e7eb] px-4 py-2 text-sm font-semibold text-[#0a0a0a]"

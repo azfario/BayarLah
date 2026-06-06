@@ -21,12 +21,14 @@ test("builds the friendly DuitNow reminder message", () => {
       "Amount owed: RM12.50",
       "Reason: Lunch",
       "",
-      "Please pay using the DuitNow QR attached. OR send to",
+      "Please pay using the DuitNow QR attached OR send to",
       "DuitNow phone number: 0123456789",
       "",
-      "Enter payment code BL48273195 in the transfer Reference/Remark field.",
+      "Enter payment code:",
+      "BL48273195",
+      "in the transfer Reference/Remark field.",
       "",
-      "After paying, send the payment receipt image back to this chat.",
+      "After paying, send the payment receipt image back to this chat reply.",
     ].join("\n")
   );
 });

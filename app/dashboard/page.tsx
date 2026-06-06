@@ -10,6 +10,7 @@ import { prisma } from "@/lib/db";
 import { formatMoney } from "@/lib/money";
 import { isProfileComplete } from "@/lib/profile";
 import { getReminderStatusLabel } from "@/lib/reminders";
+import BrandLogo from "@/components/BrandLogo";
 
 type SharePaymentStatus = {
   id: string;
@@ -81,7 +82,7 @@ export default async function DashboardPage() {
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-8">
         <header className="flex flex-col gap-6 border-b border-[#e5e7eb] pb-6 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <p className="text-sm font-semibold text-[#ff5530]">BayarLah</p>
+            <BrandLogo href="/dashboard" className="text-sm" />
             <h1 className="mt-2 text-4xl font-semibold leading-tight tracking-[-0.5px] text-[#0a0a0a] sm:text-5xl">
               Dashboard
             </h1>

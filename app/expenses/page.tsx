@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Prisma } from "@prisma/client";
 import { UserButton } from "@clerk/nextjs";
+import BrandLogo from "@/components/BrandLogo";
 import { currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import StatusToast from "@/components/StatusToast";
@@ -161,7 +162,7 @@ export default async function ExpensesPage({ searchParams }: ExpensesPageProps) 
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
         <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="text-sm font-medium text-emerald-700">BayarLah</p>
+            <BrandLogo href="/dashboard" className="text-sm" />
             <h1 className="text-3xl font-bold">Expenses</h1>
           </div>
           <div className="flex flex-wrap items-center gap-3">

@@ -50,12 +50,14 @@ export function buildWhatsAppReminderMessage({
     `Amount owed: ${amountLabel}`,
     `Reason: ${expenseDescription}`,
     "",
-    "Please pay using the DuitNow QR attached. OR send to",
+    "Please pay using the DuitNow QR attached OR send to",
     duitNowLine,
     "",
-    `Enter payment code ${paymentCode} in the transfer Reference/Remark field.`,
+    "Enter payment code:",
+    paymentCode,
+    "in the transfer Reference/Remark field.",
     "",
-    "After paying, send the payment receipt image back to this chat.",
+    "After paying, send the payment receipt image back to this chat reply.",
   ].join("\n");
 }
 

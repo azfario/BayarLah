@@ -4,6 +4,7 @@ import { currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import StatusToast from "@/components/StatusToast";
 import SubmitButton from "@/components/SubmitButton";
+import BrandLogo from "@/components/BrandLogo";
 import { createFriend, deleteFriend } from "@/lib/actions/friends";
 import { ensureUserInDB } from "@/lib/actions/user";
 import { prisma } from "@/lib/db";
@@ -38,7 +39,7 @@ export default async function FriendsPage({ searchParams }: FriendsPageProps) {
       <div className="mx-auto flex w-full max-w-4xl flex-col gap-6">
         <header className="flex items-center justify-between gap-4">
           <div>
-            <p className="text-sm font-medium text-emerald-700">BayarLah</p>
+            <BrandLogo href="/dashboard" className="text-sm" />
             <h1 className="text-3xl font-bold">Friends</h1>
           </div>
           <div className="flex items-center gap-3">

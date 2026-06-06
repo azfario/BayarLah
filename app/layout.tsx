@@ -6,6 +6,9 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "BayarLah",
   description: "no more that awkward moment when you have to ask for money ^_^",
+  icons: {
+    icon: "/bayarlah-logo.svg",
+  },
 };
 
 const dmSans = DM_Sans({

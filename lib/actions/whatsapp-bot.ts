@@ -4,7 +4,11 @@ import { currentUser } from "@clerk/nextjs/server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
-import { createOpenWaSession, startOpenWaSession } from "@/lib/openwa";
+import {
+  createOpenWaSession,
+  deleteOpenWaSession,
+  startOpenWaSession,
+} from "@/lib/openwa";
 import {
   getWhatsappBotSession,
   getWhatsappBotSessionName,
@@ -13,6 +17,14 @@ import {
 } from "@/lib/whatsapp-bot";
 
 export async function startWhatsappBotSession() {
+  await startWhatsappBotSessionWithOptions(false);
+}
+
+export async function linkDifferentWhatsappBotNumber() {
+  await startWhatsappBotSessionWithOptions(true);
+}
+
+async function startWhatsappBotSessionWithOptions(replaceExisting: boolean) {
   const clerkUser = await currentUser();
   if (!clerkUser) redirect("/sign-in");
 
@@ -24,6 +36,11 @@ export async function startWhatsappBotSession() {
   try {
     const existing = await getWhatsappBotSession(prisma);
     sessionId = existing?.sessionId ?? null;
+
+    if (replaceExisting && sessionId) {
+      await deleteOpenWaSession(sessionId);
+      sessionId = null;
+    }
 
     if (!sessionId) {
       const session = await createOpenWaSession(getWhatsappBotSessionName());
@@ -57,7 +74,11 @@ export async function startWhatsappBotSession() {
 
   revalidatePath("/admin/whatsapp-bot");
   redirect(
-    "/admin/whatsapp-bot?success=BayarLah bot session started. Scan the QR code to connect it."
+    `/admin/whatsapp-bot?success=${encodeURIComponent(
+      replaceExisting
+        ? "Old bot link removed. Scan the QR code with the new WhatsApp number."
+        : "BayarLah bot session started. Scan the QR code to connect it."
+    )}`
   );
 }
 

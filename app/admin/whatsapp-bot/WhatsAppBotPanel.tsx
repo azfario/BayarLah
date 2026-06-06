@@ -3,7 +3,10 @@
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import SubmitButton from "@/components/SubmitButton";
-import { startWhatsappBotSession } from "@/lib/actions/whatsapp-bot";
+import {
+  linkDifferentWhatsappBotNumber,
+  startWhatsappBotSession,
+} from "@/lib/actions/whatsapp-bot";
 
 type BotStatus = "NOT_LINKED" | "LINKING" | "LINKED" | "FAILED";
 
@@ -133,11 +136,35 @@ export default function WhatsAppBotPanel({
         </p>
       ) : null}
 
-      <form action={startWhatsappBotSession} className="mt-5">
-        <SubmitButton pendingLabel="Starting bot..." variant={linked ? "secondary" : "primary"}>
-          {linked ? "Restart bot session" : failed ? "Try again" : "Start bot session"}
-        </SubmitButton>
-      </form>
+      <div className="mt-5 flex flex-wrap gap-3">
+        <form action={startWhatsappBotSession}>
+          <SubmitButton
+            pendingLabel="Starting bot..."
+            variant={linked ? "secondary" : "primary"}
+          >
+            {linked ? "Restart bot session" : failed ? "Try again" : "Start bot session"}
+          </SubmitButton>
+        </form>
+
+        {state.sessionId ? (
+          <form
+            action={linkDifferentWhatsappBotNumber}
+            onSubmit={(event) => {
+              if (
+                !window.confirm(
+                  "Unlink the current bot number and generate a QR code for a different number?"
+                )
+              ) {
+                event.preventDefault();
+              }
+            }}
+          >
+            <SubmitButton pendingLabel="Removing old link..." variant="danger">
+              Link different number
+            </SubmitButton>
+          </form>
+        ) : null}
+      </div>
     </section>
   );
 }

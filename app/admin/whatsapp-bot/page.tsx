@@ -2,6 +2,7 @@ import { UserButton } from "@clerk/nextjs";
 import { currentUser } from "@clerk/nextjs/server";
 import { notFound, redirect } from "next/navigation";
 import StatusToast from "@/components/StatusToast";
+import BrandLogo from "@/components/BrandLogo";
 import { prisma } from "@/lib/db";
 import { getWhatsappBotSession, isWhatsappBotAdminEmail } from "@/lib/whatsapp-bot";
 import WhatsAppBotPanel from "./WhatsAppBotPanel";
@@ -32,7 +33,11 @@ export default async function WhatsAppBotAdminPage({
       <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
         <header className="flex items-center justify-between">
           <div>
-            <p className="text-sm font-medium text-emerald-700">BayarLah Admin</p>
+            <BrandLogo
+              href="/admin/whatsapp-bot"
+              className="text-sm"
+              label="BayarLah Admin"
+            />
             <h1 className="text-3xl font-bold">WhatsApp bot</h1>
           </div>
           <UserButton />

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { auth } from "@clerk/nextjs/server";
+import BrandLogo from "@/components/BrandLogo";
 
 export const dynamic = "force-dynamic";
 
@@ -38,12 +39,7 @@ export default async function Home() {
   return (
     <main className="min-h-screen bg-white text-[#0a0a0a]">
       <nav className="mx-auto flex w-full max-w-7xl items-center justify-between px-4 py-5 sm:px-6 lg:px-8">
-        <Link href="/" className="flex items-center gap-3 text-sm font-semibold">
-          <span className="grid h-9 w-9 place-items-center rounded-full bg-[#0a0a0a] text-white">
-            B
-          </span>
-          <span>BayarLah</span>
-        </Link>
+        <BrandLogo className="text-sm" />
 
         <div className="flex items-center gap-2 sm:gap-3">
           {userId ? (

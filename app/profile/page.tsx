@@ -7,6 +7,7 @@ import { DUITNOW_ID_TYPES } from "@/lib/duitnow";
 import { isProfileComplete } from "@/lib/profile";
 import StatusToast from "@/components/StatusToast";
 import SubmitButton from "@/components/SubmitButton";
+import BrandLogo from "@/components/BrandLogo";
 
 export const dynamic = "force-dynamic";
 
@@ -32,7 +33,7 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
       <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
         <header className="flex items-center justify-between">
           <div>
-            <p className="text-sm font-medium text-emerald-700">BayarLah</p>
+            <BrandLogo href="/dashboard" className="text-sm" />
             <h1 className="text-3xl font-bold">
               {completed ? "Edit profile" : "Complete your profile"}
             </h1>
