@@ -31,11 +31,16 @@ services:
     environment:
       OPENWA_API_BASE_URL: "http://openwa-api:2785/api"
       OPENWA_API_KEY: "dev-admin-key"
+      OPENWA_PAYMENT_PROOF_WEBHOOK_URL: "http://whatsapp-worker.local:3099/openwa/payment-proof-webhook"
       WHATSAPP_WORKER_INTERVAL_MS: "${WHATSAPP_WORKER_INTERVAL_MS:-60000}"
       WHATSAPP_RETRY_DELAY_MS: "${WHATSAPP_RETRY_DELAY_MS:-900000}"
       WHATSAPP_MAX_PER_RUN: "${WHATSAPP_MAX_PER_RUN:-20}"
       WHATSAPP_INBOUND_MESSAGE_LIMIT: "${WHATSAPP_INBOUND_MESSAGE_LIMIT:-30}"
       WHATSAPP_WEBHOOK_PORT: "${WHATSAPP_WEBHOOK_PORT:-3099}"
+    networks:
+      default:
+        aliases:
+          - whatsapp-worker.local
     depends_on:
       - openwa-api
     restart: unless-stopped

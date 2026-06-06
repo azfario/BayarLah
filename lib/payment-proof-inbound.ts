@@ -71,6 +71,7 @@ export async function handleInboundPaymentProofImage(
     parsedAmountCents: parsed.amountCents,
     parsedRecipient: parsed.recipientText,
     parsedTransactionReference: parsed.transactionReference,
+    parsedPaymentCode: parsed.paymentCode,
     parsedTimestamp: parseReceiptTimestamp(parsed.timestampText),
     rawOcrText: parsed.rawOcrText,
     confidenceNotes: parsed.confidenceNotes,

@@ -139,6 +139,7 @@ model ExpenseShare {
   friendId                 String
   friend                   Friend                    @relation(fields: [friendId], references: [id])
   owedAmount               Decimal                   @db.Decimal(10, 2)
+  paymentCode              String?                   @unique
   paidAt                   DateTime?
   reminderFrequencyValue   Int?
   reminderFrequencyUnit    ReminderFrequencyUnit?
@@ -167,6 +168,7 @@ model PaymentProof {
   imageStoragePath           String
   imageHash                  String             @unique
   parsedTransactionReference String?            @unique
+  parsedPaymentCode          String?
   receiptProvider            String?
   parsedAmount               Decimal?           @db.Decimal(10, 2)
   parsedRecipient            String?

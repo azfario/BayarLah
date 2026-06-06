@@ -1,12 +1,14 @@
 export type OpenPaymentShare = {
   id: string;
   owedAmountCents: number;
+  paymentCode: string | null;
 };
 
 export type PaymentProofMatchInput = {
   amountCents: number | null;
   recipientText: string;
   transactionReference: string;
+  paymentCode: string;
   collectorDuitNowRecipientName: string | null;
   collectorDuitNowIdValue: string | null;
   openShares: OpenPaymentShare[];
@@ -36,6 +38,39 @@ export function decidePaymentProofMatch(
 
   if (input.debtorIdentityReviewReason) {
     return pendingDecision(null, input.debtorIdentityReviewReason);
+  }
+
+  if (input.paymentCode) {
+    const codeMatches = input.openShares.filter(
+      (share) => share.paymentCode === input.paymentCode
+    );
+
+    if (codeMatches.length === 0) {
+      return pendingDecision(null, "Payment code does not match an unpaid debt.");
+    }
+
+    if (codeMatches.length > 1) {
+      return pendingDecision(null, "Multiple unpaid debts match the payment code.");
+    }
+
+    const codedShare = codeMatches[0];
+    if (input.amountCents === null) {
+      return pendingDecision(codedShare.id, "Missing transfer amount.");
+    }
+
+    if (codedShare.owedAmountCents !== input.amountCents) {
+      return pendingDecision(
+        codedShare.id,
+        "Transfer amount does not match the coded debt."
+      );
+    }
+
+    return {
+      status: "AUTO_CONFIRMED",
+      expenseShareId: codedShare.id,
+      reviewReason: null,
+      rejectedReason: null,
+    };
   }
 
   if (input.amountCents === null) {

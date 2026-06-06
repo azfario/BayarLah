@@ -95,6 +95,19 @@ export default async function ExpensesPage({ searchParams }: ExpensesPageProps) 
   const shareIds = expenses.flatMap((expense) =>
     expense.shares.map((share) => share.id)
   );
+  const paymentProofCodes =
+    pendingProofs.length > 0
+      ? await prisma.$queryRaw<{ id: string; parsedPaymentCode: string | null }[]>(
+          Prisma.sql`
+            SELECT "id", "parsedPaymentCode"
+            FROM "PaymentProof"
+            WHERE "id" IN (${Prisma.join(pendingProofs.map((proof) => proof.id))})
+          `
+        )
+      : [];
+  const paymentCodeByProofId = new Map(
+    paymentProofCodes.map((proof) => [proof.id, proof.parsedPaymentCode])
+  );
   const sharePaymentStatuses =
     shareIds.length > 0
       ? await prisma.$queryRaw<SharePaymentStatus[]>(Prisma.sql`
@@ -254,6 +267,10 @@ export default async function ExpensesPage({ searchParams }: ExpensesPageProps) 
                           <PaymentProofField
                             label="Reference"
                             value={proof.parsedTransactionReference ?? "Not found"}
+                          />
+                          <PaymentProofField
+                            label="Payment code"
+                            value={paymentCodeByProofId.get(proof.id) ?? "Not found"}
                           />
                           <PaymentProofField
                             label="Timestamp"

@@ -5,6 +5,7 @@ type WhatsAppReminderMessageInput = {
   collectorName: string;
   amountLabel: string;
   expenseDescription: string;
+  paymentCode: string;
   duitNowIdType?: string | null;
   duitNowIdValue?: string | null;
 };
@@ -34,6 +35,7 @@ export function buildWhatsAppReminderMessage({
   collectorName,
   amountLabel,
   expenseDescription,
+  paymentCode,
   duitNowIdType,
   duitNowIdValue,
 }: WhatsAppReminderMessageInput) {
@@ -50,6 +52,8 @@ export function buildWhatsAppReminderMessage({
     "",
     "Please pay using the DuitNow QR attached. OR send to",
     duitNowLine,
+    "",
+    `Enter payment code ${paymentCode} in the transfer Reference/Remark field.`,
     "",
     "After paying, send the payment receipt image back to this chat.",
   ].join("\n");

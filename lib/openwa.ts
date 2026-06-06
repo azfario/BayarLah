@@ -33,6 +33,14 @@ export type OpenWaMessageResult = {
   timestamp?: string | null;
 };
 
+export type OpenWaWebhook = {
+  id: string;
+  sessionId: string;
+  url: string;
+  events: string[];
+  active: boolean;
+};
+
 export type OpenWaInboundMessage = {
   id?: string | null;
   messageId?: string | null;
@@ -135,6 +143,36 @@ export async function deleteOpenWaSession(sessionId: string) {
   return requestOpenWa<{ message?: string }>(
     `/sessions/${encodeURIComponent(sessionId)}`,
     { method: "DELETE" }
+  );
+}
+
+export async function ensureOpenWaMessageReceivedWebhook(input: {
+  sessionId: string;
+  url: string;
+}) {
+  const webhooks = await requestOpenWa<OpenWaWebhook[]>(
+    `/sessions/${encodeURIComponent(input.sessionId)}/webhooks`,
+    { method: "GET" }
+  );
+  const existing = webhooks.find(
+    (webhook) =>
+      webhook.url === input.url &&
+      webhook.active !== false &&
+      webhook.events.includes("message.received")
+  );
+
+  if (existing) return existing;
+
+  return requestOpenWa<OpenWaWebhook>(
+    `/sessions/${encodeURIComponent(input.sessionId)}/webhooks`,
+    {
+      method: "POST",
+      body: {
+        url: input.url,
+        events: ["message.received"],
+        retryCount: 3,
+      },
+    }
   );
 }
 

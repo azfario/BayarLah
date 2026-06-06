@@ -18,6 +18,7 @@ export type CreatePaymentProofMatchInput = {
   parsedAmountCents: number | null;
   parsedRecipient: string;
   parsedTransactionReference: string;
+  parsedPaymentCode: string;
   parsedTimestamp: Date | null;
   rawOcrText: string;
   confidenceNotes: string[];
@@ -60,25 +61,30 @@ export async function createMatchedPaymentProof(input: CreatePaymentProofMatchIn
     });
 
     const openShares = resolvedDebtor.friendId
-      ? await tx.expenseShare.findMany({
-          where: {
-            friendId: resolvedDebtor.friendId,
-            paidAt: null,
-            expense: { collectorId: collector.id },
-          },
-          select: { id: true, owedAmount: true },
-        })
+      ? await tx.$queryRaw<
+          { id: string; owedAmount: Prisma.Decimal; paymentCode: string | null }[]
+        >`
+          SELECT es."id", es."owedAmount", es."paymentCode"
+          FROM "ExpenseShare" AS es
+          JOIN "Expense" AS e
+            ON e."id" = es."expenseId"
+          WHERE es."friendId" = ${resolvedDebtor.friendId}
+            AND es."paidAt" IS NULL
+            AND e."collectorId" = ${collector.id}
+        `
       : [];
 
     const decision = decidePaymentProofMatch({
       amountCents: input.parsedAmountCents,
       recipientText: input.parsedRecipient,
       transactionReference: input.parsedTransactionReference,
+      paymentCode: input.parsedPaymentCode,
       collectorDuitNowRecipientName: collector.duitNowRecipientName,
       collectorDuitNowIdValue: collector.duitNowIdValue,
       openShares: openShares.map((share) => ({
         id: share.id,
         owedAmountCents: decimalToCents(share.owedAmount),
+        paymentCode: share.paymentCode,
       })),
       debtorIdentityReviewReason: resolvedDebtor.reviewReason,
       isDuplicateImage: Boolean(duplicate?.imageHash),
@@ -119,6 +125,7 @@ export async function createMatchedPaymentProof(input: CreatePaymentProofMatchIn
       UPDATE "PaymentProof"
       SET
         "receiptProvider" = ${input.receiptProvider || null},
+        "parsedPaymentCode" = ${input.parsedPaymentCode || null},
         "inboundMessageId" = ${input.messageId || null},
         "inboundChatId" = ${input.inboundChatId || null},
         "inboundSenderId" = ${input.inboundSenderId || null}

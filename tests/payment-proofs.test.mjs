@@ -17,6 +17,7 @@ Transaction Date: 31/05/2026 09:41 PM
   assert.equal(parsed.amountCents, 5000);
   assert.equal(parsed.recipientText, "AHMAD BIN ALI");
   assert.equal(parsed.transactionReference, "MBB123456789");
+  assert.equal(parsed.paymentCode, "");
   assert.equal(parsed.timestampText, "31/05/2026 09:41 PM");
   assert.deepEqual(parsed.confidenceNotes, []);
 });
@@ -64,6 +65,54 @@ Date & Time
   assert.equal(parsed.recipientText, "BayarLah Collector 0123456789");
   assert.equal(parsed.transactionReference, "");
   assert.equal(parsed.timestampText, "31/05/2026 09:41 PM");
+  assert.deepEqual(parsed.confidenceNotes, []);
+});
+
+test("parses and normalizes a payment code without treating it as a transaction reference", () => {
+  const parsed = parseBankReceiptOcrText(`
+Maybank2u
+Transfer Successful
+Recipient Name: AHMAD BIN ALI
+Amount: RM 50.00
+Reference: b l-4827-3195
+Transaction Date: 31/05/2026 09:41 PM
+  `);
+
+  assert.equal(parsed.paymentCode, "BL48273195");
+  assert.equal(parsed.transactionReference, "");
+  assert.ok(parsed.confidenceNotes.includes("Missing transaction reference."));
+});
+
+test("keeps a real transaction reference when the receipt also has a payment code", () => {
+  const parsed = parseBankReceiptOcrText(`
+CIMB OCTO
+Transfer Successful
+Recipient Name: AHMAD BIN ALI
+Amount: RM 50.00
+Transaction ID: CIMB998877
+Recipient Reference: BL48273195
+Date/Time: 31/05/2026 09:41 PM
+  `);
+
+  assert.equal(parsed.paymentCode, "BL48273195");
+  assert.equal(parsed.transactionReference, "CIMB998877");
+});
+
+test("extracts a payment code from a TNG remark", () => {
+  const parsed = parseBankReceiptOcrText(`
+TNG eWallet
+Transferred
+RM 50.00
+Receiver
+AHMAD BIN ALI
+Remark
+BL-4827-3195
+Date & Time
+31/05/2026 09:41 PM
+  `);
+
+  assert.equal(parsed.paymentCode, "BL48273195");
+  assert.equal(parsed.transactionReference, "");
   assert.deepEqual(parsed.confidenceNotes, []);
 });
 

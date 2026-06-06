@@ -205,6 +205,7 @@ CREATE TABLE IF NOT EXISTS "ExpenseShare" (
   "expenseId" TEXT NOT NULL,
   "friendId" TEXT NOT NULL,
   "owedAmount" DECIMAL(10,2) NOT NULL,
+  "paymentCode" TEXT,
   "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -216,6 +217,7 @@ CREATE TABLE IF NOT EXISTS "ExpenseShare" (
 CREATE UNIQUE INDEX IF NOT EXISTS "ExpenseShare_expenseId_friendId_key" ON "ExpenseShare"("expenseId", "friendId");
 CREATE INDEX IF NOT EXISTS "ExpenseShare_friendId_idx" ON "ExpenseShare"("friendId");
 
+ALTER TABLE "ExpenseShare" ADD COLUMN IF NOT EXISTS "paymentCode" TEXT;
 ALTER TABLE "ExpenseShare" ADD COLUMN IF NOT EXISTS "reminderFrequencyValue" INTEGER;
 ALTER TABLE "ExpenseShare" ADD COLUMN IF NOT EXISTS "reminderFrequencyUnit" "ReminderFrequencyUnit";
 ALTER TABLE "ExpenseShare" ADD COLUMN IF NOT EXISTS "reminderStatus" "ReminderStatus" NOT NULL DEFAULT 'NOT_SCHEDULED';
@@ -227,6 +229,7 @@ UPDATE "ExpenseShare"
 SET "reminderStatus" = 'NOT_SCHEDULED'
 WHERE "reminderStatus" IS NULL;
 CREATE INDEX IF NOT EXISTS "ExpenseShare_reminderStatus_nextReminderAt_idx" ON "ExpenseShare"("reminderStatus", "nextReminderAt");
+CREATE UNIQUE INDEX IF NOT EXISTS "ExpenseShare_paymentCode_key" ON "ExpenseShare"("paymentCode");
 
 CREATE TABLE IF NOT EXISTS "WhatsappReminderAttempt" (
   "id" TEXT NOT NULL,
@@ -296,6 +299,7 @@ CREATE TABLE IF NOT EXISTS "PaymentProof" (
   "imageStoragePath" TEXT NOT NULL,
   "imageHash" TEXT NOT NULL,
   "parsedTransactionReference" TEXT,
+  "parsedPaymentCode" TEXT,
   "receiptProvider" TEXT,
   "parsedAmount" DECIMAL(10,2),
   "parsedRecipient" TEXT,
@@ -322,6 +326,7 @@ CREATE INDEX IF NOT EXISTS "PaymentProof_collectorId_status_idx" ON "PaymentProo
 CREATE INDEX IF NOT EXISTS "PaymentProof_debtorFriendId_idx" ON "PaymentProof"("debtorFriendId");
 CREATE INDEX IF NOT EXISTS "PaymentProof_expenseShareId_idx" ON "PaymentProof"("expenseShareId");
 ALTER TABLE "PaymentProof" ADD COLUMN IF NOT EXISTS "receiptProvider" TEXT;
+ALTER TABLE "PaymentProof" ADD COLUMN IF NOT EXISTS "parsedPaymentCode" TEXT;
 ALTER TABLE "PaymentProof" ADD COLUMN IF NOT EXISTS "inboundMessageId" TEXT;
 ALTER TABLE "PaymentProof" ADD COLUMN IF NOT EXISTS "inboundChatId" TEXT;
 ALTER TABLE "PaymentProof" ADD COLUMN IF NOT EXISTS "inboundSenderId" TEXT;

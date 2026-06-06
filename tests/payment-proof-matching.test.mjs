@@ -6,9 +6,12 @@ const baseInput = {
   amountCents: 5000,
   recipientText: "Recipient Name: BayarLah Collector",
   transactionReference: "TXN123",
+  paymentCode: "",
   collectorDuitNowRecipientName: "BayarLah Collector",
   collectorDuitNowIdValue: "0123456789",
-  openShares: [{ id: "share_1", owedAmountCents: 5000 }],
+  openShares: [
+    { id: "share_1", owedAmountCents: 5000, paymentCode: "BL48273195" },
+  ],
   isDuplicateImage: false,
   isDuplicateTransactionReference: false,
   confidenceNotes: [],
@@ -102,4 +105,86 @@ test("can auto-confirm without a transaction reference when parser has no confid
 
   assert.equal(decision.status, "AUTO_CONFIRMED");
   assert.equal(decision.expenseShareId, "share_1");
+});
+
+test("payment code selects one debt when multiple unpaid debts have the same amount", () => {
+  const decision = decidePaymentProofMatch({
+    ...baseInput,
+    paymentCode: "BL48273195",
+    openShares: [
+      { id: "share_1", owedAmountCents: 5000, paymentCode: "BL48273195" },
+      { id: "share_2", owedAmountCents: 5000, paymentCode: "BL12345678" },
+    ],
+  });
+
+  assert.equal(decision.status, "AUTO_CONFIRMED");
+  assert.equal(decision.expenseShareId, "share_1");
+});
+
+test("payment code and exact amount bypass recipient and confidence checks", () => {
+  const decision = decidePaymentProofMatch({
+    ...baseInput,
+    paymentCode: "BL48273195",
+    recipientText: "",
+    confidenceNotes: [
+      "Missing recipient text.",
+      "Missing transaction reference.",
+      "Missing transfer timestamp.",
+    ],
+  });
+
+  assert.equal(decision.status, "AUTO_CONFIRMED");
+  assert.equal(decision.expenseShareId, "share_1");
+});
+
+test("keeps an unknown or paid-debt payment code pending review", () => {
+  const decision = decidePaymentProofMatch({
+    ...baseInput,
+    paymentCode: "BL00000000",
+  });
+
+  assert.equal(decision.status, "PENDING_REVIEW");
+  assert.equal(decision.expenseShareId, null);
+  assert.equal(
+    decision.reviewReason,
+    "Payment code does not match an unpaid debt."
+  );
+});
+
+test("keeps a coded proof with no amount pending review", () => {
+  const decision = decidePaymentProofMatch({
+    ...baseInput,
+    paymentCode: "BL48273195",
+    amountCents: null,
+  });
+
+  assert.equal(decision.status, "PENDING_REVIEW");
+  assert.equal(decision.expenseShareId, "share_1");
+  assert.equal(decision.reviewReason, "Missing transfer amount.");
+});
+
+test("keeps a coded proof with the wrong amount pending review", () => {
+  const decision = decidePaymentProofMatch({
+    ...baseInput,
+    paymentCode: "BL48273195",
+    amountCents: 4999,
+  });
+
+  assert.equal(decision.status, "PENDING_REVIEW");
+  assert.equal(decision.expenseShareId, "share_1");
+  assert.equal(
+    decision.reviewReason,
+    "Transfer amount does not match the coded debt."
+  );
+});
+
+test("duplicate protection runs before payment-code matching", () => {
+  const decision = decidePaymentProofMatch({
+    ...baseInput,
+    paymentCode: "BL48273195",
+    isDuplicateImage: true,
+  });
+
+  assert.equal(decision.status, "DUPLICATE_REJECTED");
+  assert.equal(decision.rejectedReason, "Duplicate receipt image.");
 });

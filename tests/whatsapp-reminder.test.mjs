@@ -8,6 +8,7 @@ test("builds the friendly DuitNow reminder message", () => {
     collectorName: "Hakim",
     amountLabel: "RM12.50",
     expenseDescription: "Lunch",
+    paymentCode: "BL48273195",
     duitNowIdType: "PHONE",
     duitNowIdValue: "0123456789",
   });
@@ -23,7 +24,26 @@ test("builds the friendly DuitNow reminder message", () => {
       "Please pay using the DuitNow QR attached. OR send to",
       "DuitNow phone number: 0123456789",
       "",
+      "Enter payment code BL48273195 in the transfer Reference/Remark field.",
+      "",
       "After paying, send the payment receipt image back to this chat.",
     ].join("\n")
+  );
+});
+
+test("reuses the supplied payment code in repeated reminder messages", () => {
+  const input = {
+    friendName: "Aina",
+    collectorName: "Hakim",
+    amountLabel: "RM12.50",
+    expenseDescription: "Lunch",
+    paymentCode: "BL48273195",
+    duitNowIdType: "PHONE",
+    duitNowIdValue: "0123456789",
+  };
+
+  assert.equal(
+    buildWhatsAppReminderMessage(input),
+    buildWhatsAppReminderMessage(input)
   );
 });

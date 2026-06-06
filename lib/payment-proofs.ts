@@ -1,8 +1,11 @@
+import { extractPaymentCode } from "./payment-codes.ts";
+
 export type BankReceiptParseResult = {
   provider: "TNG_EWALLET" | "GENERIC_BANK";
   amountCents: number | null;
   recipientText: string;
   transactionReference: string;
+  paymentCode: string;
   timestampText: string;
   rawOcrText: string;
   confidenceNotes: string[];
@@ -41,7 +44,11 @@ export function parseBankReceiptOcrText(ocrText: string): BankReceiptParseResult
 
   const amountCents = extractAmountCents(lines);
   const recipientText = extractLabeledValue(lines, RECIPIENT_LABEL_PATTERN);
-  const transactionReference = extractLabeledValue(lines, REFERENCE_LABEL_PATTERN);
+  const paymentCode = extractPaymentCode(rawOcrText);
+  const transactionReference = removePaymentCodeReference(
+    extractLabeledValue(lines, REFERENCE_LABEL_PATTERN),
+    paymentCode
+  );
   const timestampText = extractTimestampText(lines);
   const confidenceNotes = getConfidenceNotes({
     rawOcrText,
@@ -56,6 +63,7 @@ export function parseBankReceiptOcrText(ocrText: string): BankReceiptParseResult
     amountCents,
     recipientText,
     transactionReference,
+    paymentCode,
     timestampText,
     rawOcrText,
     confidenceNotes,
@@ -66,9 +74,10 @@ function parseTngReceipt(rawOcrText: string, lines: string[]): BankReceiptParseR
   const coreLines = trimTngFooter(lines);
   const amountCents = extractTngAmountCents(coreLines);
   const recipientText = extractTngRecipientText(coreLines);
-  const transactionReference = extractLabeledValue(
-    coreLines,
-    TNG_REFERENCE_LABEL_PATTERN
+  const paymentCode = extractPaymentCode(rawOcrText);
+  const transactionReference = removePaymentCodeReference(
+    extractLabeledValue(coreLines, TNG_REFERENCE_LABEL_PATTERN),
+    paymentCode
   );
   const timestampText = extractTngTimestampText(coreLines);
   const confidenceNotes = getConfidenceNotes({
@@ -85,10 +94,20 @@ function parseTngReceipt(rawOcrText: string, lines: string[]): BankReceiptParseR
     amountCents,
     recipientText,
     transactionReference,
+    paymentCode,
     timestampText,
     rawOcrText,
     confidenceNotes,
   };
+}
+
+function removePaymentCodeReference(
+  transactionReference: string,
+  paymentCode: string
+) {
+  if (!paymentCode) return transactionReference;
+
+  return extractPaymentCode(transactionReference) ? "" : transactionReference;
 }
 
 function isTngReceipt(rawOcrText: string) {

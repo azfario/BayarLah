@@ -2,8 +2,10 @@ import { Buffer } from "node:buffer";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { Prisma, PrismaClient } from "@prisma/client";
 import { formatMoney } from "../../lib/money.js";
+import { generatePaymentCode } from "../../lib/payment-codes.js";
 import {
   downloadOpenWaMessageMedia,
+  ensureOpenWaMessageReceivedWebhook,
   getOpenWaLinkedPhone,
   type OpenWaInboundMessage,
   listOpenWaMessages,
@@ -65,6 +67,8 @@ const inboundMessageLimit = getPositiveInteger(
   30
 );
 const webhookPort = getOptionalPositiveInteger(process.env.WHATSAPP_WEBHOOK_PORT);
+const paymentProofWebhookUrl =
+  process.env.OPENWA_PAYMENT_PROOF_WEBHOOK_URL?.trim() || null;
 const logEmptyPolls = getBoolean(process.env.WHATSAPP_LOG_EMPTY_POLLS, false);
 const runOnce =
   process.env.WHATSAPP_WORKER_RUN_ONCE === "true" ||
@@ -72,6 +76,7 @@ const runOnce =
 
 let shuttingDown = false;
 const processedInboundMessageIds = new Set<string>();
+const webhookRegisteredSessions = new Set<string>();
 let webhookServer: ReturnType<typeof createServer> | null = null;
 
 async function main() {
@@ -126,6 +131,7 @@ async function getActiveWhatsappBotSession(): Promise<ActiveBotSession | null> {
       linkedAt: storedSession.linkedAt ?? new Date(),
       linkError: null,
     });
+    await ensurePaymentProofWebhook(storedSession.sessionId);
 
     return { sessionId: storedSession.sessionId };
   } catch (error) {
@@ -138,6 +144,28 @@ async function getActiveWhatsappBotSession(): Promise<ActiveBotSession | null> {
     });
     console.error(`BayarLah bot session check failed: ${getErrorMessage(error)}`);
     return null;
+  }
+}
+
+async function ensurePaymentProofWebhook(sessionId: string) {
+  if (
+    !paymentProofWebhookUrl ||
+    webhookRegisteredSessions.has(sessionId)
+  ) {
+    return;
+  }
+
+  try {
+    await ensureOpenWaMessageReceivedWebhook({
+      sessionId,
+      url: paymentProofWebhookUrl,
+    });
+    webhookRegisteredSessions.add(sessionId);
+    console.log(`Registered OpenWA payment proof webhook for session ${sessionId}.`);
+  } catch (error) {
+    console.error(
+      `Failed to register OpenWA payment proof webhook: ${getErrorMessage(error)}`
+    );
   }
 }
 
@@ -415,11 +443,13 @@ async function sendReminder(share: DueShare, botSession: ActiveBotSession) {
 
   const collector = share.expense.collector;
   const qrUrl = collector.duitNowQrUrl ?? "";
+  const paymentCode = await ensureExpenseSharePaymentCode(share.id);
   const messageText = buildWhatsAppReminderMessage({
     friendName: share.friend.name,
     collectorName: collector.fullName ?? "Your friend",
     amountLabel: formatMoney(share.owedAmount),
     expenseDescription: share.expense.description,
+    paymentCode,
     duitNowIdType: collector.duitNowIdType,
     duitNowIdValue: collector.duitNowIdValue,
   });
@@ -492,6 +522,56 @@ async function sendReminder(share: DueShare, botSession: ActiveBotSession) {
       `Failed WhatsApp reminder for ${share.friend.phone}: ${getErrorMessage(error)}`
     );
   }
+}
+
+async function ensureExpenseSharePaymentCode(shareId: string) {
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const paymentCode = generatePaymentCode();
+    const updatedAt = new Date();
+    let assigned: { paymentCode: string }[];
+    try {
+      assigned = await prisma.$queryRaw<{ paymentCode: string }[]>`
+        UPDATE "ExpenseShare"
+        SET
+          "paymentCode" = ${paymentCode},
+          "updatedAt" = ${updatedAt}
+        WHERE "id" = ${shareId}
+          AND "paymentCode" IS NULL
+          AND NOT EXISTS (
+            SELECT 1
+            FROM "ExpenseShare" AS existing
+            WHERE existing."paymentCode" = ${paymentCode}
+          )
+        RETURNING "paymentCode"
+      `;
+    } catch (error) {
+      if (isUniqueConstraintError(error)) continue;
+      throw error;
+    }
+    if (assigned[0]?.paymentCode) return assigned[0].paymentCode;
+
+    const existing = await prisma.$queryRaw<{ paymentCode: string | null }[]>`
+      SELECT "paymentCode"
+      FROM "ExpenseShare"
+      WHERE "id" = ${shareId}
+      LIMIT 1
+    `;
+    if (existing[0]?.paymentCode) return existing[0].paymentCode;
+    if (existing.length === 0) {
+      throw new Error("Expense share not found while assigning a payment code.");
+    }
+  }
+
+  throw new Error("Could not generate a unique payment code.");
+}
+
+function isUniqueConstraintError(error: unknown) {
+  if (!(error instanceof Prisma.PrismaClientKnownRequestError)) return false;
+
+  return (
+    error.code === "P2002" ||
+    (error.code === "P2010" && error.meta?.code === "23505")
+  );
 }
 
 async function sendPaymentProofWorkerNotifications(input: {

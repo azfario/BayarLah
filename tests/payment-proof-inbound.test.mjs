@@ -32,6 +32,7 @@ Transfer Successful
 Recipient Name: BAYARLAH COLLECTOR
 Amount: RM 50.00
 Reference No: MBB123456789
+Recipient Reference: BL48273195
 Transaction Date: 31/05/2026 09:41 PM
       `,
       createMatchedProof: async (input) => {
@@ -39,6 +40,7 @@ Transaction Date: 31/05/2026 09:41 PM
           "match",
           input.parsedAmountCents,
           input.parsedRecipient,
+          input.parsedPaymentCode,
           input.receiptProvider,
           input.inboundChatId,
           input.senderSessionId,
@@ -62,6 +64,7 @@ Transaction Date: 31/05/2026 09:41 PM
     "match",
     5000,
     "BAYARLAH COLLECTOR",
+    "BL48273195",
     "GENERIC_BANK",
     "60123456789@c.us",
     "bot_session_1",

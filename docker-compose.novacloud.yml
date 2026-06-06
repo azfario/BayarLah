@@ -33,6 +33,12 @@ services:
     environment:
       OPENWA_API_BASE_URL: "http://openwa-api:2785/api"
       OPENWA_API_KEY_FILE: "/openwa-data/.api-key"
+      OPENWA_PAYMENT_PROOF_WEBHOOK_URL: "http://whatsapp-worker.local:3099/openwa/payment-proof-webhook"
+      WHATSAPP_WEBHOOK_PORT: "3099"
+    networks:
+      default:
+        aliases:
+          - whatsapp-worker.local
     depends_on:
       - openwa-api
     volumes:
