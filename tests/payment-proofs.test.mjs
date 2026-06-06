@@ -74,11 +74,11 @@ Maybank2u
 Transfer Successful
 Recipient Name: AHMAD BIN ALI
 Amount: RM 50.00
-Reference: b l-4827-3195
+Reference: 4827-3195
 Transaction Date: 31/05/2026 09:41 PM
   `);
 
-  assert.equal(parsed.paymentCode, "BL48273195");
+  assert.equal(parsed.paymentCode, "48273195");
   assert.equal(parsed.transactionReference, "");
   assert.ok(parsed.confidenceNotes.includes("Missing transaction reference."));
 });
@@ -90,11 +90,11 @@ Transfer Successful
 Recipient Name: AHMAD BIN ALI
 Amount: RM 50.00
 Transaction ID: CIMB998877
-Recipient Reference: BL48273195
+Recipient Reference: 48273195
 Date/Time: 31/05/2026 09:41 PM
   `);
 
-  assert.equal(parsed.paymentCode, "BL48273195");
+  assert.equal(parsed.paymentCode, "48273195");
   assert.equal(parsed.transactionReference, "CIMB998877");
 });
 
@@ -106,14 +106,41 @@ RM 50.00
 Receiver
 AHMAD BIN ALI
 Remark
-BL-4827-3195
+4827-3195
 Date & Time
 31/05/2026 09:41 PM
   `);
 
-  assert.equal(parsed.paymentCode, "BL48273195");
+  assert.equal(parsed.paymentCode, "48273195");
   assert.equal(parsed.transactionReference, "");
   assert.deepEqual(parsed.confidenceNotes, []);
+});
+
+test("keeps supporting previously issued BL payment codes", () => {
+  const parsed = parseBankReceiptOcrText(`
+Maybank2u
+Transfer Successful
+Recipient Name: AHMAD BIN ALI
+Amount: RM 50.00
+Recipient Reference: BL48273195
+Transaction Date: 31/05/2026 09:41 PM
+  `);
+
+  assert.equal(parsed.paymentCode, "BL48273195");
+});
+
+test("does not treat an unrelated eight-digit number as a payment code", () => {
+  const parsed = parseBankReceiptOcrText(`
+Maybank2u
+Transfer Successful
+Recipient Name: AHMAD BIN ALI
+Recipient Account: 48273195
+Amount: RM 50.00
+Transaction ID: CIMB998877
+Transaction Date: 31/05/2026 09:41 PM
+  `);
+
+  assert.equal(parsed.paymentCode, "");
 });
 
 test("parses TNG receipt before ad footer text", () => {

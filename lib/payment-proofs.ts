@@ -17,6 +17,8 @@ const RECIPIENT_LABEL_PATTERN =
   /\b(recipient name|recipient duitnow id|duitnow name|to account|recipient|receiver|beneficiary|payee|merchant|to)\b/i;
 const REFERENCE_LABEL_PATTERN =
   /\b(ref(?:erence)? no|transaction id|transaction ref|receipt no|duitnow ref|payment ref|reference|rrn)\b/i;
+const PAYMENT_CODE_LABEL_PATTERN =
+  /\b(recipient reference|recipient ref|payment details|remark|reference)\b/i;
 const TIMESTAMP_LABEL_PATTERN =
   /\b(transaction date|payment date|transfer date|date\/time|date|time|when)\b/i;
 const TNG_BRAND_PATTERN = /\b(touch\s*['’]?\s*n\s*go\s+ewallet|tng\s+ewallet)\b/i;
@@ -44,7 +46,7 @@ export function parseBankReceiptOcrText(ocrText: string): BankReceiptParseResult
 
   const amountCents = extractAmountCents(lines);
   const recipientText = extractLabeledValue(lines, RECIPIENT_LABEL_PATTERN);
-  const paymentCode = extractPaymentCode(rawOcrText);
+  const paymentCode = extractLabeledPaymentCode(lines);
   const transactionReference = removePaymentCodeReference(
     extractLabeledValue(lines, REFERENCE_LABEL_PATTERN),
     paymentCode
@@ -74,7 +76,7 @@ function parseTngReceipt(rawOcrText: string, lines: string[]): BankReceiptParseR
   const coreLines = trimTngFooter(lines);
   const amountCents = extractTngAmountCents(coreLines);
   const recipientText = extractTngRecipientText(coreLines);
-  const paymentCode = extractPaymentCode(rawOcrText);
+  const paymentCode = extractLabeledPaymentCode(coreLines);
   const transactionReference = removePaymentCodeReference(
     extractLabeledValue(coreLines, TNG_REFERENCE_LABEL_PATTERN),
     paymentCode
@@ -108,6 +110,23 @@ function removePaymentCodeReference(
   if (!paymentCode) return transactionReference;
 
   return extractPaymentCode(transactionReference) ? "" : transactionReference;
+}
+
+function extractLabeledPaymentCode(lines: string[]) {
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index];
+    if (!PAYMENT_CODE_LABEL_PATTERN.test(line)) continue;
+
+    const inlineCode = extractPaymentCode(
+      stripLabel(line, PAYMENT_CODE_LABEL_PATTERN)
+    );
+    if (inlineCode) return inlineCode;
+
+    const nextLineCode = extractPaymentCode(lines[index + 1] ?? "");
+    if (nextLineCode) return nextLineCode;
+  }
+
+  return "";
 }
 
 function isTngReceipt(rawOcrText: string) {

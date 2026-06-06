@@ -8,7 +8,7 @@ test("builds the friendly DuitNow reminder message", () => {
     collectorName: "Hakim",
     amountLabel: "RM12.50",
     expenseDescription: "Lunch",
-    paymentCode: "BL48273195",
+    paymentCode: "48273195",
     duitNowIdType: "PHONE",
     duitNowIdValue: "0123456789",
   });
@@ -25,7 +25,7 @@ test("builds the friendly DuitNow reminder message", () => {
       "DuitNow phone number: 0123456789",
       "",
       "Enter payment code:",
-      "BL48273195",
+      "48273195",
       "in the transfer Reference/Remark field.",
       "",
       "After paying, send the payment receipt image back to this chat reply.",
@@ -39,7 +39,7 @@ test("reuses the supplied payment code in repeated reminder messages", () => {
     collectorName: "Hakim",
     amountLabel: "RM12.50",
     expenseDescription: "Lunch",
-    paymentCode: "BL48273195",
+    paymentCode: "48273195",
     duitNowIdType: "PHONE",
     duitNowIdValue: "0123456789",
   };

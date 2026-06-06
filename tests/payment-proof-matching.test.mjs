@@ -10,7 +10,7 @@ const baseInput = {
   collectorDuitNowRecipientName: "BayarLah Collector",
   collectorDuitNowIdValue: "0123456789",
   openShares: [
-    { id: "share_1", owedAmountCents: 5000, paymentCode: "BL48273195" },
+    { id: "share_1", owedAmountCents: 5000, paymentCode: "48273195" },
   ],
   isDuplicateImage: false,
   isDuplicateTransactionReference: false,
@@ -110,10 +110,10 @@ test("can auto-confirm without a transaction reference when parser has no confid
 test("payment code selects one debt when multiple unpaid debts have the same amount", () => {
   const decision = decidePaymentProofMatch({
     ...baseInput,
-    paymentCode: "BL48273195",
+    paymentCode: "48273195",
     openShares: [
-      { id: "share_1", owedAmountCents: 5000, paymentCode: "BL48273195" },
-      { id: "share_2", owedAmountCents: 5000, paymentCode: "BL12345678" },
+      { id: "share_1", owedAmountCents: 5000, paymentCode: "48273195" },
+      { id: "share_2", owedAmountCents: 5000, paymentCode: "12345678" },
     ],
   });
 
@@ -124,7 +124,7 @@ test("payment code selects one debt when multiple unpaid debts have the same amo
 test("payment code and exact amount bypass recipient and confidence checks", () => {
   const decision = decidePaymentProofMatch({
     ...baseInput,
-    paymentCode: "BL48273195",
+    paymentCode: "48273195",
     recipientText: "",
     confidenceNotes: [
       "Missing recipient text.",
@@ -140,7 +140,7 @@ test("payment code and exact amount bypass recipient and confidence checks", () 
 test("keeps an unknown or paid-debt payment code pending review", () => {
   const decision = decidePaymentProofMatch({
     ...baseInput,
-    paymentCode: "BL00000000",
+    paymentCode: "00000000",
   });
 
   assert.equal(decision.status, "PENDING_REVIEW");
@@ -154,7 +154,7 @@ test("keeps an unknown or paid-debt payment code pending review", () => {
 test("keeps a coded proof with no amount pending review", () => {
   const decision = decidePaymentProofMatch({
     ...baseInput,
-    paymentCode: "BL48273195",
+    paymentCode: "48273195",
     amountCents: null,
   });
 
@@ -166,7 +166,7 @@ test("keeps a coded proof with no amount pending review", () => {
 test("keeps a coded proof with the wrong amount pending review", () => {
   const decision = decidePaymentProofMatch({
     ...baseInput,
-    paymentCode: "BL48273195",
+    paymentCode: "48273195",
     amountCents: 4999,
   });
 
@@ -181,7 +181,7 @@ test("keeps a coded proof with the wrong amount pending review", () => {
 test("duplicate protection runs before payment-code matching", () => {
   const decision = decidePaymentProofMatch({
     ...baseInput,
-    paymentCode: "BL48273195",
+    paymentCode: "48273195",
     isDuplicateImage: true,
   });
 
