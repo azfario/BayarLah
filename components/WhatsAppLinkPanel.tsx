@@ -44,9 +44,15 @@ export default function WhatsAppLinkPanel({
   });
 
   useEffect(() => {
-    if (!profileReady || state.status !== "LINKING") return;
+    if (
+      !profileReady ||
+      (state.status !== "LINKING" && state.status !== "LINKED")
+    ) {
+      return;
+    }
 
     let cancelled = false;
+    const pollIntervalMs = state.status === "LINKING" ? 3000 : 10000;
 
     async function poll() {
       try {
@@ -76,7 +82,7 @@ export default function WhatsAppLinkPanel({
     }
 
     void poll();
-    const interval = window.setInterval(() => void poll(), 3000);
+    const interval = window.setInterval(() => void poll(), pollIntervalMs);
 
     return () => {
       cancelled = true;
