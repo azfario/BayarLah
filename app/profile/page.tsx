@@ -37,7 +37,7 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
               {completed ? "Edit profile" : "Complete your profile"}
             </h1>
           </div>
-          <UserButton afterSignOutUrl="/" />
+          <UserButton />
         </header>
 
         <StatusToast error={params.error} success={params.success} />

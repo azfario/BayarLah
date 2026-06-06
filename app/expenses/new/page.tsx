@@ -61,7 +61,7 @@ export default async function ExpenseCreatePage({
             >
               Friends
             </Link>
-            <UserButton afterSignOutUrl="/" />
+            <UserButton />
           </div>
         </header>
 

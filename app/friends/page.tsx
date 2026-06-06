@@ -48,7 +48,7 @@ export default async function FriendsPage({ searchParams }: FriendsPageProps) {
             <Link href="/expenses" className="text-sm font-medium text-zinc-600 hover:text-zinc-950">
               Expenses
             </Link>
-            <UserButton afterSignOutUrl="/" />
+            <UserButton />
           </div>
         </header>
 

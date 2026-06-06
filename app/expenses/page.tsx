@@ -164,7 +164,7 @@ export default async function ExpensesPage({ searchParams }: ExpensesPageProps) 
             >
               Record expense
             </Link>
-            <UserButton afterSignOutUrl="/" />
+            <UserButton />
           </div>
         </header>
 

@@ -35,7 +35,7 @@ export default async function WhatsAppBotAdminPage({
             <p className="text-sm font-medium text-emerald-700">BayarLah Admin</p>
             <h1 className="text-3xl font-bold">WhatsApp bot</h1>
           </div>
-          <UserButton afterSignOutUrl="/" />
+          <UserButton />
         </header>
 
         <StatusToast error={params.error} success={params.success} />
