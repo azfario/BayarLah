@@ -1,7 +1,8 @@
 services:
   openwa-api:
-    image: ghcr.io/rmyndharis/openwa:latest
+    image: ghcr.io/rmyndharis/openwa:0.1.6
     environment:
+      API_MASTER_KEY: "dev-admin-key"
       NODE_ENV: "development"
       PORT: "2785"
       DATABASE_TYPE: "sqlite"

@@ -945,6 +945,15 @@ async function handleWebhookRequest(
   request: IncomingMessage,
   response: ServerResponse
 ) {
+  if (request.method === "GET" && request.url === "/health") {
+    writeJson(response, shuttingDown ? 503 : 200, {
+      ok: !shuttingDown,
+      service: "bayarlah-whatsapp-worker",
+      uptimeSeconds: Math.floor(process.uptime()),
+    });
+    return;
+  }
+
   if (request.method !== "POST" || request.url !== "/openwa/payment-proof-webhook") {
     writeJson(response, 404, { error: "Not found." });
     return;

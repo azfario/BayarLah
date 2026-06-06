@@ -8,20 +8,22 @@
     "dev:demo": "node scripts/dev-demo.mjs",
     "build": "next build --turbopack",
     "start": "next start",
+    "postinstall": "prisma generate",
+    "db:setup": "node scripts/setup-db.mjs",
     "lint": "eslint",
     "test:payment-proofs": "node --test --experimental-strip-types tests/payment-proofs.test.mjs tests/payment-proof-matching.test.mjs tests/payment-proof-inbound.test.mjs tests/whatsapp-reminder.test.mjs tests/profile.test.mjs tests/whatsapp-bot.test.mjs",
     "docker:demo": "docker compose -f docker-compose.demo.yml up --build",
     "docker:worker": "docker compose -f docker-compose.worker.yml up --build",
-    "docker:novacloud": "docker compose -f docker-compose.novacloud.yml up -d --build",
+    "docker:novacloud": "docker compose --env-file .env.novacloud -f docker-compose.novacloud.yml up -d --build",
     "whatsapp:worker": "npm --prefix workers/whatsapp run start"
   },
   "dependencies": {
-    "@clerk/nextjs": "^6.39.3",
+    "@clerk/nextjs": "^6.39.5",
     "@prisma/client": "^5.22.0",
     "@supabase/supabase-js": "^2.105.1",
-    "next": "15.5.15",
-    "react": "19.1.0",
-    "react-dom": "19.1.0"
+    "next": "15.5.19",
+    "react": "19.1.8",
+    "react-dom": "19.1.8"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
@@ -30,7 +32,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
-    "eslint-config-next": "15.5.15",
+    "eslint-config-next": "15.5.19",
     "prisma": "^5.22.0",
     "tailwindcss": "^4",
     "typescript": "^5"

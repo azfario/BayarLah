@@ -13,6 +13,13 @@ export const dynamic = "force-dynamic";
 
 export async function POST(request: NextRequest) {
   const configuredSecret = process.env.OPENWA_WEBHOOK_SECRET;
+  if (process.env.NODE_ENV === "production" && !configuredSecret) {
+    return NextResponse.json(
+      { error: "Webhook authentication is not configured." },
+      { status: 503 }
+    );
+  }
+
   if (configuredSecret) {
     const receivedSecret =
       request.headers.get("x-openwa-webhook-secret") ??

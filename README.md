@@ -35,6 +35,9 @@ For the local WhatsApp reminder demo, use:
 npm run dev:demo
 ```
 
+For the production Vercel, Supabase, Clerk, and NovaCloud rollout, follow
+[the deployment runbook](deploy/README.md).
+
 ## Project Status
 
 In development. Current functionality includes authentication, profile onboarding, friend management, manual and receipt-assisted expenses, receipt parsing, split allocation, and WhatsApp reminder demo support.

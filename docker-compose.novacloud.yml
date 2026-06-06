@@ -1,9 +1,8 @@
 services:
   openwa-api:
-    image: ghcr.io/rmyndharis/openwa:latest
-    env_file:
-      - .env.novacloud
+    image: ghcr.io/rmyndharis/openwa:0.1.6
     environment:
+      API_MASTER_KEY: "${OPENWA_API_KEY:?Set OPENWA_API_KEY in .env.novacloud}"
       NODE_ENV: "production"
       PORT: "2785"
       DATABASE_TYPE: "sqlite"
@@ -22,6 +21,23 @@ services:
     volumes:
       - openwa_data:/app/data
     restart: unless-stopped
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "require('http').get('http://localhost:2785/api/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 45s
+    logging: &default-logging
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   whatsapp-worker:
     build:
@@ -29,10 +45,9 @@ services:
       dockerfile: workers/whatsapp/Dockerfile
     image: bayarlah-whatsapp-worker:novacloud
     env_file:
-      - .env.novacloud
+      - ${NOVACLOUD_ENV_FILE:-.env.novacloud}
     environment:
       OPENWA_API_BASE_URL: "http://openwa-api:2785/api"
-      OPENWA_API_KEY_FILE: "/openwa-data/.api-key"
       OPENWA_PAYMENT_PROOF_WEBHOOK_URL: "http://whatsapp-worker.local:3099/openwa/payment-proof-webhook"
       WHATSAPP_WEBHOOK_PORT: "3099"
     networks:
@@ -40,17 +55,30 @@ services:
         aliases:
           - whatsapp-worker.local
     depends_on:
-      - openwa-api
-    volumes:
-      - openwa_data:/openwa-data:ro
+      openwa-api:
+        condition: service_healthy
     restart: unless-stopped
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "require('http').get('http://localhost:3099/health', (r) => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+    logging: *default-logging
 
   caddy:
-    image: caddy:2-alpine
-    env_file:
-      - .env.novacloud
+    image: caddy:2.10.2-alpine
+    environment:
+      WORKER_DOMAIN: "${WORKER_DOMAIN:?Set WORKER_DOMAIN in .env.novacloud}"
     depends_on:
-      - openwa-api
+      openwa-api:
+        condition: service_healthy
     ports:
       - "80:80"
       - "443:443"
@@ -59,6 +87,13 @@ services:
       - caddy_data:/data
       - caddy_config:/config
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:2019/config/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    logging: *default-logging
 
 volumes:
   openwa_data:

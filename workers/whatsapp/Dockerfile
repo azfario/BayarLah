@@ -12,8 +12,7 @@ COPY prisma ./prisma
 ENV DATABASE_URL=postgresql://postgres:postgres@localhost:5432/postgres \
     DIRECT_URL=postgresql://postgres:postgres@localhost:5432/postgres
 
-RUN npm ci --legacy-peer-deps \
-  && npx prisma generate
+RUN npm ci --legacy-peer-deps
 
 COPY workers/whatsapp/package.json workers/whatsapp/package-lock.json ./workers/whatsapp/
 RUN npm --prefix workers/whatsapp ci --legacy-peer-deps
