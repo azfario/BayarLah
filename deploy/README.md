@@ -115,6 +115,10 @@ All three services must report healthy. Inspect startup failures with:
 docker compose --env-file .env.novacloud -f docker-compose.novacloud.yml logs --tail=200
 ```
 
+The OpenWA entrypoint removes only stale Chromium `SingletonLock`,
+`SingletonCookie`, and `SingletonSocket` files before startup. WhatsApp
+authentication data remains in the persistent `openwa_data` volume.
+
 ## 4. Configure Vercel
 
 Connect the GitHub repository and deploy `main`. The committed `vercel.json`

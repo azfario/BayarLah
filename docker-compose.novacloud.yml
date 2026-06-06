@@ -1,6 +1,7 @@
 services:
   openwa-api:
     image: ghcr.io/rmyndharis/openwa:0.1.6
+    entrypoint: ["/usr/local/bin/openwa-entrypoint"]
     environment:
       API_MASTER_KEY: "${OPENWA_API_KEY:?Set OPENWA_API_KEY in .env.novacloud}"
       NODE_ENV: "production"
@@ -20,6 +21,7 @@ services:
       - "2785"
     volumes:
       - openwa_data:/app/data
+      - ./deploy/openwa-entrypoint.sh:/usr/local/bin/openwa-entrypoint:ro
     restart: unless-stopped
     healthcheck:
       test:
