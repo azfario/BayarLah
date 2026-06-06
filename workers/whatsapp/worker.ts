@@ -22,7 +22,7 @@ import {
   toOpenWaChatId,
 } from "../../lib/whatsapp.js";
 import {
-  getLinkedWhatsappBotSession,
+  getWhatsappBotSession,
   resolveWhatsappBotInboundRoute,
   updateWhatsappBotSessionStatus,
 } from "../../lib/whatsapp-bot.js";
@@ -105,7 +105,7 @@ async function main() {
 }
 
 async function getActiveWhatsappBotSession(): Promise<ActiveBotSession | null> {
-  const storedSession = await getLinkedWhatsappBotSession(prisma);
+  const storedSession = await getWhatsappBotSession(prisma);
   if (!storedSession?.sessionId) return null;
 
   try {
