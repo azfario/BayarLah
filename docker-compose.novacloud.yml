@@ -50,9 +50,12 @@ services:
       - ${NOVACLOUD_ENV_FILE:-.env.novacloud}
     environment:
       OPENWA_API_BASE_URL: "http://openwa-api:2785/api"
-      OPENWA_API_KEY: "${OPENWA_API_KEY:?Set OPENWA_API_KEY in .env.novacloud}"
+      OPENWA_API_KEY: ""
+      OPENWA_API_KEY_FILE: "/openwa-data/.api-key"
       OPENWA_PAYMENT_PROOF_WEBHOOK_URL: "http://whatsapp-worker.local:3099/openwa/payment-proof-webhook"
       WHATSAPP_WEBHOOK_PORT: "3099"
+    volumes:
+      - openwa_data:/openwa-data:ro
     networks:
       default:
         aliases:
