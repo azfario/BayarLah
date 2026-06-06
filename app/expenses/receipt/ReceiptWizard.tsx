@@ -386,7 +386,7 @@ export default function ReceiptWizard({
 
   return (
     <div className="grid gap-6">
-      <section className="rounded-lg border border-zinc-200 bg-white p-6 shadow-sm">
+      <section className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm sm:p-6">
         <form
           onSubmit={handleReceiptSubmit}
           className="grid gap-4 md:grid-cols-[1fr_auto]"
@@ -447,7 +447,7 @@ export default function ReceiptWizard({
       </section>
 
       {draft ? (
-        <div className="grid gap-6 lg:grid-cols-[300px_1fr]">
+        <div className="grid min-w-0 gap-6 lg:grid-cols-[300px_minmax(0,1fr)]">
           {receiptPreviewUrl ? (
             <aside className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm">
               <img
@@ -461,7 +461,7 @@ export default function ReceiptWizard({
             </aside>
           ) : null}
 
-          <section className="grid gap-6">
+          <section className="grid min-w-0 gap-6">
             <ReceiptDetails
               draft={draft}
               description={description}
@@ -529,7 +529,7 @@ function ReceiptDetails({
   ) => void;
 }) {
   return (
-    <div className="rounded-lg border border-zinc-200 bg-white p-6 shadow-sm">
+    <div className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm sm:p-6">
       <div className="grid gap-4 md:grid-cols-3">
         <label className="flex flex-col gap-2 md:col-span-3">
           <span className="text-sm font-medium">Description</span>
@@ -596,7 +596,7 @@ function SplitModePicker({
   onChange: (mode: SplitMode) => void;
 }) {
   return (
-    <fieldset className="rounded-lg border border-zinc-200 bg-white p-6 shadow-sm">
+    <fieldset className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm sm:p-6">
       <legend className="text-sm font-medium">Split mode</legend>
       <div className="mt-2 grid gap-3 md:grid-cols-2">
         <label className="flex cursor-pointer items-start gap-3 rounded-md border border-zinc-200 p-4">
@@ -665,13 +665,13 @@ function ParticipantsSection({
   ) => void;
 }) {
   return (
-    <div className="rounded-lg border border-zinc-200 bg-white p-6 shadow-sm">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+    <div className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm sm:p-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <h2 className="text-xl font-semibold">Participants</h2>
         <button
           type="button"
           onClick={onAddInlineFriend}
-          className="rounded-md border border-emerald-700 px-3 py-2 text-sm font-medium text-emerald-700 hover:bg-emerald-50"
+          className="w-full rounded-md border border-emerald-700 px-3 py-2 text-sm font-medium text-emerald-700 hover:bg-emerald-50 sm:w-auto"
         >
           + Add friend
         </button>
@@ -693,11 +693,11 @@ function ParticipantsSection({
                     key={friend.id}
                     type="button"
                     onClick={() => onAddFriend(friend.id)}
-                    className="flex w-full items-center justify-between gap-4 border-b border-zinc-100 px-3 py-2 text-left last:border-b-0 hover:bg-emerald-50"
+                    className="flex min-w-0 w-full items-center justify-between gap-4 border-b border-zinc-100 px-3 py-2 text-left last:border-b-0 hover:bg-emerald-50"
                   >
-                    <span>
-                      <span className="block font-medium">{friend.name}</span>
-                      <span className="block text-sm text-zinc-500">
+                    <span className="min-w-0">
+                      <span className="block break-words font-medium">{friend.name}</span>
+                      <span className="block break-all text-sm text-zinc-500">
                         {friend.phone}
                       </span>
                     </span>
@@ -718,16 +718,18 @@ function ParticipantsSection({
             {selectedFriends.map((friend) => (
               <div
                 key={friend.id}
-                className="flex items-center justify-between gap-3 rounded-md border border-zinc-200 px-3 py-2"
+                className="flex flex-col gap-3 rounded-md border border-zinc-200 px-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:py-2"
               >
-                <span>
-                  <span className="block font-medium">{friend.name}</span>
-                  <span className="block text-sm text-zinc-500">{friend.phone}</span>
+                <span className="min-w-0">
+                  <span className="block break-words font-medium">{friend.name}</span>
+                  <span className="block break-all text-sm text-zinc-500">
+                    {friend.phone}
+                  </span>
                 </span>
                 <button
                   type="button"
                   onClick={() => onRemoveFriend(friend.id)}
-                  className="rounded-md border border-zinc-300 px-3 py-2 text-sm font-medium text-zinc-600 hover:bg-zinc-50"
+                  className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm font-medium text-zinc-600 hover:bg-zinc-50 sm:w-auto"
                 >
                   Remove
                 </button>
@@ -774,7 +776,7 @@ function ParticipantsSection({
                   <button
                     type="button"
                     onClick={() => onRemoveInlineFriend(friend.key)}
-                    className="rounded-md border border-zinc-300 px-3 py-2 text-sm font-medium text-zinc-600 hover:bg-white"
+                    className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm font-medium text-zinc-600 hover:bg-white sm:w-auto"
                   >
                     {inlineFriends.length === 1 && index === 0 ? "Clear" : "Remove"}
                   </button>
@@ -818,13 +820,13 @@ function ParsedItemsSection({
   ) => void;
 }) {
   return (
-    <div className="rounded-lg border border-zinc-200 bg-white p-6 shadow-sm">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+    <div className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm sm:p-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <h2 className="text-xl font-semibold">Parsed items</h2>
         <button
           type="button"
           onClick={onAddItem}
-          className="rounded-md border border-emerald-700 px-3 py-2 text-sm font-medium text-emerald-700 hover:bg-emerald-50"
+          className="w-full rounded-md border border-emerald-700 px-3 py-2 text-sm font-medium text-emerald-700 hover:bg-emerald-50 sm:w-auto"
         >
           + Add item
         </button>
@@ -872,7 +874,7 @@ function ParsedItemsSection({
                 type="button"
                 onClick={() => onRemoveItem(item.key)}
                 disabled={draft.items.length === 1}
-                className="rounded-md border border-zinc-300 px-3 py-2 text-sm font-medium text-zinc-600 hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50"
+                className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm font-medium text-zinc-600 hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
               >
                 Remove
               </button>
@@ -974,15 +976,17 @@ function CustomItemMatcher({
                   disabled={!selectedItemKey}
                   className="flex w-full items-center justify-between gap-3 text-left disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  <span>
-                    <span className="block font-medium">{participant.name}</span>
+                  <span className="min-w-0">
+                    <span className="block break-words font-medium">
+                      {participant.name}
+                    </span>
                     {participant.phone ? (
-                      <span className="block text-sm text-zinc-500">
+                      <span className="block break-all text-sm text-zinc-500">
                         {participant.phone}
                       </span>
                     ) : null}
                   </span>
-                  <span className="text-sm font-medium text-emerald-700">
+                  <span className="shrink-0 text-sm font-medium text-emerald-700">
                     {formatMoney(subtotalCents / 100)}
                   </span>
                 </button>
@@ -995,9 +999,9 @@ function CustomItemMatcher({
                       return (
                         <div
                           key={assignment.id}
-                          className="flex items-center justify-between gap-3 rounded-md bg-zinc-50 px-3 py-2 text-sm"
+                          className="flex flex-col gap-2 rounded-md bg-zinc-50 px-3 py-2 text-sm sm:flex-row sm:items-center sm:justify-between"
                         >
-                          <span>
+                          <span className="min-w-0 break-words">
                             {item?.name || "Item"} -{" "}
                             {formatMoney(
                               (parseMoneyToCents(item?.unitAmount ?? "") ?? 0) / 100
@@ -1006,7 +1010,7 @@ function CustomItemMatcher({
                           <button
                             type="button"
                             onClick={() => onRemoveAssignment(assignment.id)}
-                            className="text-xs font-medium text-zinc-600 hover:text-zinc-950"
+                            className="self-start text-xs font-medium text-zinc-600 hover:text-zinc-950 sm:self-auto"
                           >
                             Remove
                           </button>
@@ -1040,7 +1044,7 @@ function FinalAmountsSection({
   description: string;
 }) {
   return (
-    <div className="rounded-lg border border-zinc-200 bg-white p-6 shadow-sm">
+    <div className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm sm:p-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h2 className="text-xl font-semibold">Final amounts</h2>
@@ -1057,10 +1061,12 @@ function FinalAmountsSection({
         {review?.participantSummaries.map((participant) => (
           <div
             key={participant.key}
-            className="flex items-center justify-between rounded-md bg-zinc-50 px-3 py-2 text-sm"
+            className="flex items-start justify-between gap-3 rounded-md bg-zinc-50 px-3 py-2 text-sm"
           >
-            <span>{participant.name}</span>
-            <span className="font-medium">{formatMoney(participant.totalCents / 100)}</span>
+            <span className="min-w-0 break-words">{participant.name}</span>
+            <span className="shrink-0 font-medium">
+              {formatMoney(participant.totalCents / 100)}
+            </span>
           </div>
         ))}
       </div>
@@ -1085,11 +1091,11 @@ function FinalAmountsSection({
         <input type="hidden" name="description" value={description} />
         <input type="hidden" name="receiptPayload" value={receiptPayload} />
         <ReminderFrequencyPicker />
-        <div className="flex justify-end">
+        <div className="flex justify-stretch sm:justify-end">
           <button
             type="submit"
             disabled={!review?.canSave || isSaving}
-            className="inline-flex items-center justify-center gap-2 rounded-md bg-emerald-700 px-5 py-2 font-medium text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:bg-zinc-300"
+            className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-emerald-700 px-5 py-2 font-medium text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:bg-zinc-300 sm:w-auto"
           >
             {isSaving ? (
               <>

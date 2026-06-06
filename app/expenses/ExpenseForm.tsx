@@ -123,7 +123,10 @@ export default function ExpenseForm({ friends }: ExpenseFormProps) {
   }
 
   return (
-    <form action={createExpense} className="rounded-lg border border-zinc-200 bg-white p-6 shadow-sm">
+    <form
+      action={createExpense}
+      className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm sm:p-6"
+    >
       <div className="grid gap-5 md:grid-cols-2">
         <label className="flex flex-col gap-2">
           <span className="text-sm font-medium">Description</span>
@@ -191,10 +194,10 @@ export default function ExpenseForm({ friends }: ExpenseFormProps) {
       </fieldset>
 
       <section className="mt-5">
-        <div className="flex items-center justify-between gap-4">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <h2 className="text-sm font-medium">Saved friends</h2>
           {splitMode === "EQUAL_SPLIT" && equalShareCents > 0 ? (
-            <span className="text-sm text-emerald-700">
+            <span className="text-sm text-emerald-700 sm:text-right">
               Each selected friend owes {formatMoney(equalShareCents / 100)}
             </span>
           ) : null}
@@ -216,11 +219,11 @@ export default function ExpenseForm({ friends }: ExpenseFormProps) {
                       key={friend.id}
                       type="button"
                       onClick={() => addSelectedFriend(friend.id)}
-                      className="flex w-full items-center justify-between gap-4 border-b border-zinc-100 px-3 py-2 text-left last:border-b-0 hover:bg-emerald-50"
+                      className="flex min-w-0 w-full items-center justify-between gap-4 border-b border-zinc-100 px-3 py-2 text-left last:border-b-0 hover:bg-emerald-50"
                     >
-                      <span>
-                        <span className="block font-medium">{friend.name}</span>
-                        <span className="block text-sm text-zinc-500">{friend.phone}</span>
+                      <span className="min-w-0">
+                        <span className="block break-words font-medium">{friend.name}</span>
+                        <span className="block break-all text-sm text-zinc-500">{friend.phone}</span>
                       </span>
                       <span className="text-sm font-medium text-emerald-700">Add</span>
                     </button>
@@ -241,9 +244,9 @@ export default function ExpenseForm({ friends }: ExpenseFormProps) {
                     className="grid gap-3 rounded-md border border-zinc-200 p-4 md:grid-cols-[1fr_180px_auto]"
                   >
                     <input type="hidden" name="friendIds" value={friend.id} />
-                    <div>
-                      <p className="font-medium">{friend.name}</p>
-                      <p className="text-sm text-zinc-500">{friend.phone}</p>
+                    <div className="min-w-0">
+                      <p className="break-words font-medium">{friend.name}</p>
+                      <p className="break-all text-sm text-zinc-500">{friend.phone}</p>
                     </div>
 
                     {splitMode === "CUSTOM_AMOUNT" ? (
@@ -273,7 +276,7 @@ export default function ExpenseForm({ friends }: ExpenseFormProps) {
                       <button
                         type="button"
                         onClick={() => removeSelectedFriend(friend.id)}
-                        className="rounded-md border border-zinc-300 px-3 py-2 text-sm font-medium text-zinc-600 hover:bg-zinc-50"
+                        className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm font-medium text-zinc-600 hover:bg-zinc-50 sm:w-auto"
                       >
                         Remove
                       </button>
@@ -295,12 +298,12 @@ export default function ExpenseForm({ friends }: ExpenseFormProps) {
       </section>
 
       <section className="mt-5 rounded-md border border-zinc-200 p-4">
-        <div className="flex items-center justify-between gap-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <h2 className="text-sm font-medium">Add new friends inline</h2>
           <button
             type="button"
             onClick={addInlineFriend}
-            className="rounded-md border border-emerald-700 px-3 py-2 text-sm font-medium text-emerald-700 hover:bg-emerald-50"
+            className="w-full rounded-md border border-emerald-700 px-3 py-2 text-sm font-medium text-emerald-700 hover:bg-emerald-50 sm:w-auto"
           >
             + Add friend
           </button>
@@ -375,7 +378,7 @@ export default function ExpenseForm({ friends }: ExpenseFormProps) {
                   <button
                     type="button"
                     onClick={() => removeInlineFriend(friend.key)}
-                    className="rounded-md border border-zinc-300 px-3 py-2 text-sm font-medium text-zinc-600 hover:bg-white"
+                    className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm font-medium text-zinc-600 hover:bg-white sm:w-auto"
                   >
                     {inlineFriends.length === 1 && index === 0 ? "Clear" : "Remove"}
                   </button>
@@ -418,8 +421,11 @@ export default function ExpenseForm({ friends }: ExpenseFormProps) {
 
       <ReminderFrequencyPicker className="mt-5" />
 
-      <div className="mt-6 flex justify-end">
-        <SubmitButton pendingLabel="Saving expense...">
+      <div className="mt-6 flex justify-stretch sm:justify-end">
+        <SubmitButton
+          pendingLabel="Saving expense..."
+          className="w-full sm:w-auto"
+        >
           Save expense
         </SubmitButton>
       </div>

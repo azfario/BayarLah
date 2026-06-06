@@ -29,16 +29,16 @@ export default async function WhatsAppBotAdminPage({
   const session = await getWhatsappBotSession(prisma);
 
   return (
-    <main className="min-h-screen bg-zinc-50 px-4 py-8 text-zinc-950">
+    <main className="min-h-screen bg-zinc-50 px-4 py-6 text-zinc-950 sm:py-8">
       <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
-        <header className="flex items-center justify-between">
-          <div>
+        <header className="flex items-start justify-between gap-4">
+          <div className="min-w-0">
             <BrandLogo
               href="/admin/whatsapp-bot"
               className="text-sm"
               label="BayarLah Admin"
             />
-            <h1 className="text-3xl font-bold">WhatsApp bot</h1>
+            <h1 className="text-2xl font-bold sm:text-3xl">WhatsApp bot</h1>
           </div>
           <UserButton />
         </header>

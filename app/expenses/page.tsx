@@ -158,14 +158,14 @@ export default async function ExpensesPage({ searchParams }: ExpensesPageProps) 
   const proofImageUrlById = await getPaymentProofImageUrls(pendingProofs);
 
   return (
-    <main className="min-h-screen bg-zinc-50 px-4 py-8 text-zinc-950">
+    <main className="min-h-screen bg-zinc-50 px-4 py-6 text-zinc-950 sm:py-8">
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
         <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <BrandLogo href="/dashboard" className="text-sm" />
-            <h1 className="text-3xl font-bold">Expenses</h1>
+            <h1 className="text-2xl font-bold sm:text-3xl">Expenses</h1>
           </div>
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
             <Link href="/dashboard" className="text-sm font-medium text-zinc-600 hover:text-zinc-950">
               Dashboard
             </Link>
@@ -174,7 +174,7 @@ export default async function ExpensesPage({ searchParams }: ExpensesPageProps) 
             </Link>
             <Link
               href="/expenses/new"
-              className="inline-flex items-center justify-center rounded-md bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800"
+              className="inline-flex w-full items-center justify-center rounded-md bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800 sm:w-auto"
             >
               Record expense
             </Link>
@@ -185,7 +185,7 @@ export default async function ExpensesPage({ searchParams }: ExpensesPageProps) 
         <StatusToast error={params.error} success={params.success} />
 
         {pendingProofs.length > 0 ? (
-          <section className="rounded-lg border border-amber-200 bg-white p-6 shadow-sm">
+          <section className="rounded-lg border border-amber-200 bg-white p-4 shadow-sm sm:p-6">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <h2 className="text-xl font-semibold">Payment reviews</h2>
@@ -298,17 +298,17 @@ export default async function ExpensesPage({ searchParams }: ExpensesPageProps) 
                           {confirmCandidates.map((share) => (
                             <div
                               key={share.id}
-                              className="flex flex-wrap items-center justify-between gap-3 rounded-md bg-white px-3 py-2 text-sm"
+                              className="flex flex-col gap-3 rounded-md bg-white px-3 py-2 text-sm sm:flex-row sm:items-center sm:justify-between"
                             >
-                              <div>
-                                <p className="font-medium">
+                              <div className="min-w-0">
+                                <p className="break-words font-medium">
                                   {share.friend.name} - {formatMoney(share.owedAmount)}
                                 </p>
-                                <p className="text-zinc-500">
+                                <p className="break-words text-zinc-500">
                                   {share.expense.description}
                                 </p>
                               </div>
-                              <form action={confirmPaymentProof}>
+                              <form action={confirmPaymentProof} className="w-full sm:w-auto">
                                 <input
                                   type="hidden"
                                   name="paymentProofId"
@@ -317,7 +317,7 @@ export default async function ExpensesPage({ searchParams }: ExpensesPageProps) 
                                 <input type="hidden" name="shareId" value={share.id} />
                                 <SubmitButton
                                   pendingLabel="Confirming..."
-                                  className="px-3 py-1 text-xs"
+                                  className="w-full px-3 py-2 text-xs sm:w-auto sm:py-1"
                                 >
                                   Confirm
                                 </SubmitButton>
@@ -336,7 +336,7 @@ export default async function ExpensesPage({ searchParams }: ExpensesPageProps) 
                         <SubmitButton
                           variant="danger"
                           pendingLabel="Rejecting..."
-                          className="px-3 py-1 text-xs"
+                          className="w-full px-3 py-2 text-xs sm:w-auto sm:py-1"
                         >
                           Reject
                         </SubmitButton>
@@ -349,8 +349,8 @@ export default async function ExpensesPage({ searchParams }: ExpensesPageProps) 
           </section>
         ) : null}
 
-        <section className="rounded-lg border border-zinc-200 bg-white p-6 shadow-sm">
-          <div className="flex items-center justify-between gap-4">
+        <section className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm sm:p-6">
+          <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
             <h2 className="text-xl font-semibold">Recent expenses</h2>
             <span className="text-sm text-zinc-500">
               Showing {expenses.length} of {expenseCount}
@@ -361,24 +361,24 @@ export default async function ExpensesPage({ searchParams }: ExpensesPageProps) 
             <div className="mt-4 divide-y divide-zinc-100">
               {expenses.map((expense) => (
                 <article key={expense.id} className="py-4">
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div>
-                      <h3 className="font-semibold">{expense.description}</h3>
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="min-w-0">
+                      <h3 className="break-words font-semibold">{expense.description}</h3>
                       <p className="text-sm text-zinc-500">
                         {expense.splitMode === "EQUAL_SPLIT" ? "Equal split" : "Custom amounts"} -{" "}
                         Total paid {formatMoney(expense.totalAmount)}
                       </p>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <p className="text-sm text-zinc-500">
+                    <div className="flex flex-col gap-3 sm:items-end">
+                      <p className="text-sm text-zinc-500 sm:text-right">
                         Your amount {formatMoney(expense.collectorAmount)}
                       </p>
-                      <form action={deleteExpense}>
+                      <form action={deleteExpense} className="w-full sm:w-auto">
                         <input type="hidden" name="expenseId" value={expense.id} />
                         <SubmitButton
                           variant="danger"
                           pendingLabel="Removing..."
-                          className="px-3 py-2 text-sm"
+                          className="w-full px-3 py-2 text-sm sm:w-auto"
                         >
                           Remove
                         </SubmitButton>
@@ -395,13 +395,15 @@ export default async function ExpensesPage({ searchParams }: ExpensesPageProps) 
                       return (
                         <div
                           key={share.id}
-                          className="flex items-start justify-between gap-3 rounded-md bg-zinc-50 px-3 py-2 text-sm"
+                          className="flex flex-col gap-3 rounded-md bg-zinc-50 px-3 py-3 text-sm sm:flex-row sm:items-start sm:justify-between sm:py-2"
                         >
-                          <div>
+                          <div className="min-w-0">
                             <div className="flex flex-wrap items-center gap-2">
-                              <span>
+                              <span className="break-words">
                                 {share.friend.name}{" "}
-                                <span className="text-zinc-500">({share.friend.phone})</span>
+                                <span className="break-all text-zinc-500">
+                                  ({share.friend.phone})
+                                </span>
                               </span>
                               <span
                                 className={`rounded-full px-2 py-0.5 text-xs font-medium ${
@@ -419,7 +421,7 @@ export default async function ExpensesPage({ searchParams }: ExpensesPageProps) 
                               </span>
                             ) : null}
                           </div>
-                          <div className="flex flex-col items-end gap-2 text-right">
+                          <div className="flex w-full flex-col items-stretch gap-2 text-left sm:w-auto sm:items-end sm:text-right">
                             <span>
                               <span className="block font-medium">
                                 {formatMoney(share.owedAmount)}
@@ -431,12 +433,15 @@ export default async function ExpensesPage({ searchParams }: ExpensesPageProps) 
                               </span>
                             </span>
                             {!isPaid && share.reminderStatus === "ACTIVE" ? (
-                              <form action={queueExpenseShareReminderNow}>
+                              <form
+                                action={queueExpenseShareReminderNow}
+                                className="w-full sm:w-auto"
+                              >
                                 <input type="hidden" name="shareId" value={share.id} />
                                 <SubmitButton
                                   variant="secondary"
                                   pendingLabel="Queueing..."
-                                  className="px-3 py-1 text-xs"
+                                  className="w-full px-3 py-2 text-xs sm:w-auto sm:py-1"
                                 >
                                   Send now
                                 </SubmitButton>
@@ -446,12 +451,13 @@ export default async function ExpensesPage({ searchParams }: ExpensesPageProps) 
                               action={
                                 isPaid ? markExpenseShareUnpaid : markExpenseSharePaid
                               }
+                              className="w-full sm:w-auto"
                             >
                               <input type="hidden" name="shareId" value={share.id} />
                               <SubmitButton
                                 variant="secondary"
                                 pendingLabel={isPaid ? "Marking..." : "Settling..."}
-                                className="px-3 py-1 text-xs"
+                                className="w-full px-3 py-2 text-xs sm:w-auto sm:py-1"
                               >
                                 {isPaid ? "Mark unpaid" : "Mark paid"}
                               </SubmitButton>
@@ -482,9 +488,11 @@ export default async function ExpensesPage({ searchParams }: ExpensesPageProps) 
                             key={item.id}
                             className="rounded-md bg-white px-3 py-2 text-sm"
                           >
-                            <div className="flex items-center justify-between gap-3">
-                              <span className="font-medium">{item.name}</span>
-                              <span>{formatMoney(item.amount)}</span>
+                            <div className="flex items-start justify-between gap-3">
+                              <span className="min-w-0 break-words font-medium">
+                                {item.name}
+                              </span>
+                              <span className="shrink-0">{formatMoney(item.amount)}</span>
                             </div>
                             <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-zinc-500">
                               {item.allocations.map((allocation) => (
@@ -555,7 +563,7 @@ function PaymentProofField({
   return (
     <div>
       <dt className="text-xs font-medium uppercase text-zinc-500">{label}</dt>
-      <dd className="break-words text-zinc-800">{value}</dd>
+      <dd className="break-all text-zinc-800">{value}</dd>
     </div>
   );
 }

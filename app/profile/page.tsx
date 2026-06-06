@@ -29,12 +29,12 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
   const completed = isProfileComplete(user);
 
   return (
-    <main className="min-h-screen bg-zinc-50 px-4 py-8 text-zinc-950">
+    <main className="min-h-screen bg-zinc-50 px-4 py-6 text-zinc-950 sm:py-8">
       <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
-        <header className="flex items-center justify-between">
-          <div>
+        <header className="flex items-start justify-between gap-4">
+          <div className="min-w-0">
             <BrandLogo href="/dashboard" className="text-sm" />
-            <h1 className="text-3xl font-bold">
+            <h1 className="break-words text-2xl font-bold sm:text-3xl">
               {completed ? "Edit profile" : "Complete your profile"}
             </h1>
           </div>
@@ -45,7 +45,7 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
 
         <form
           action={saveProfile}
-          className="rounded-lg border border-zinc-200 bg-white p-6 shadow-sm"
+          className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm sm:p-6"
         >
           <input type="hidden" name="redirectTo" value={next} />
 
@@ -148,7 +148,7 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
               </p>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid gap-4 sm:grid-cols-2">
               {user.profilePhotoUrl ? (
                 <div className="flex flex-col gap-2">
                   <span className="text-sm font-medium">Current photo</span>
@@ -173,8 +173,11 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
             </div>
           </div>
 
-          <div className="mt-6 flex justify-end">
-            <SubmitButton pendingLabel="Saving profile...">
+          <div className="mt-6 flex justify-stretch sm:justify-end">
+            <SubmitButton
+              pendingLabel="Saving profile..."
+              className="w-full sm:w-auto"
+            >
               {completed ? "Save profile" : "Save profile details"}
             </SubmitButton>
           </div>

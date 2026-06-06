@@ -28,7 +28,7 @@ export const bayarlahAuthAppearance = {
     rootBox: "w-full",
     cardBox: "w-full shadow-none",
     card:
-      "w-full rounded-[24px] border border-[#e5e7eb] bg-white p-6 shadow-none sm:p-8",
+      "w-full rounded-[24px] border border-[#e5e7eb] bg-white p-4 shadow-none sm:p-8",
     headerTitle: "text-2xl font-semibold text-[#0a0a0a]",
     headerSubtitle: "text-sm leading-6 text-[#5f5f5f]",
     socialButtonsBlockButton:
@@ -74,7 +74,7 @@ export default function AuthPageShell({
 
   return (
     <main className="min-h-screen bg-white text-[#0a0a0a]">
-      <div className="mx-auto grid min-h-screen w-full max-w-7xl gap-8 px-4 py-6 sm:px-6 lg:grid-cols-[minmax(320px,0.9fr)_minmax(360px,1fr)] lg:px-8">
+      <div className="mx-auto grid min-h-screen w-full max-w-7xl gap-8 px-4 py-4 sm:px-6 sm:py-6 lg:grid-cols-[minmax(320px,0.9fr)_minmax(360px,1fr)] lg:px-8">
         <section className="hidden rounded-[32px] bg-[#0a0a0a] p-8 text-white lg:flex lg:flex-col lg:justify-between">
           <BrandLogo className="text-sm" inverted size={40} />
 
@@ -107,11 +107,11 @@ export default function AuthPageShell({
         </section>
 
         <section className="flex min-h-full flex-col">
-          <header className="flex items-center justify-between lg:hidden">
+          <header className="flex items-center justify-between gap-3 lg:hidden">
             <BrandLogo className="text-sm" />
             <Link
               href={alternate.href}
-              className="rounded-full border border-[#e5e7eb] px-4 py-2 text-sm font-semibold text-[#0a0a0a]"
+              className="shrink-0 rounded-full border border-[#e5e7eb] px-3 py-2 text-sm font-semibold text-[#0a0a0a] sm:px-4"
             >
               {alternate.label}
             </Link>
@@ -126,13 +126,13 @@ export default function AuthPageShell({
             </Link>
           </div>
 
-          <div className="flex flex-1 items-center justify-center py-10 lg:py-0">
+          <div className="flex flex-1 items-center justify-center py-8 sm:py-10 lg:py-0">
             <div className="w-full max-w-[430px]">
               <div className="mb-7">
                 <p className="text-sm font-semibold text-[#ff5530]">
                   {eyebrow}
                 </p>
-                <h2 className="mt-3 text-4xl font-semibold leading-tight text-[#0a0a0a]">
+                <h2 className="mt-3 text-3xl font-semibold leading-tight text-[#0a0a0a] sm:text-4xl">
                   {title}
                 </h2>
                 <p className="mt-3 text-sm leading-6 text-[#5f5f5f]">

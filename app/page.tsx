@@ -42,12 +42,12 @@ export default async function Home() {
       <nav className="mx-auto flex w-full max-w-7xl items-center justify-between px-4 py-5 sm:px-6 lg:px-8">
         <BrandLogo className="text-sm" />
 
-        <div className="flex items-center gap-2 sm:gap-3">
+        <div className="flex min-w-0 items-center gap-2 sm:gap-3">
           {userId ? (
             <>
               <Link
                 href="/dashboard"
-                className="inline-flex items-center justify-center rounded-full bg-[#0a0a0a] px-5 py-2.5 text-sm font-semibold text-white"
+                className="inline-flex items-center justify-center rounded-full bg-[#0a0a0a] px-4 py-2.5 text-sm font-semibold text-white sm:px-5"
               >
                 Dashboard
               </Link>
@@ -63,7 +63,7 @@ export default async function Home() {
               </Link>
               <Link
                 href="/sign-up"
-                className="inline-flex items-center justify-center rounded-full bg-[#0a0a0a] px-5 py-2.5 text-sm font-semibold text-white"
+                className="inline-flex items-center justify-center rounded-full bg-[#0a0a0a] px-4 py-2.5 text-sm font-semibold text-white sm:px-5"
               >
                 Create account
               </Link>
@@ -114,12 +114,12 @@ export default async function Home() {
 
         <div className="grid gap-4" aria-label="BayarLah expense preview">
           <section className="rounded-[32px] bg-[#0a0a0a] p-6 text-white sm:p-8">
-            <div className="flex items-start justify-between gap-6">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
               <div>
                 <p className="text-sm font-semibold text-white/70">
                   Dinner at Jalan Alor
                 </p>
-                <p className="mt-3 text-5xl font-semibold leading-none">
+                <p className="mt-3 text-4xl font-semibold leading-none sm:text-5xl">
                   RM 84.50
                 </p>
               </div>

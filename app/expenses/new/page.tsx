@@ -42,12 +42,12 @@ export default async function ExpenseCreatePage({
   });
 
   return (
-    <main className="min-h-screen bg-zinc-50 px-4 py-8 text-zinc-950">
+    <main className="min-h-screen bg-zinc-50 px-4 py-6 text-zinc-950 sm:py-8">
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
         <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <BrandLogo href="/dashboard" className="text-sm" />
-            <h1 className="text-3xl font-bold">Record expense</h1>
+            <h1 className="text-2xl font-bold sm:text-3xl">Record expense</h1>
           </div>
           <div className="flex flex-wrap items-center gap-3">
             <Link

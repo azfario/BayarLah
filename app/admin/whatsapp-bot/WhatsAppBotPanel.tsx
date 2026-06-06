@@ -66,12 +66,12 @@ export default function WhatsAppBotPanel({
   const failed = state.status === "FAILED";
 
   return (
-    <section className="rounded-lg border border-zinc-200 bg-white p-6 shadow-sm">
+    <section className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm sm:p-6">
       <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
         <div>
           <p className="text-sm font-medium text-emerald-700">WhatsApp Bot</p>
           <h2 className="text-xl font-semibold">BayarLah bot session</h2>
-          <p className="mt-2 max-w-xl text-sm text-zinc-500">
+          <p className="mt-2 max-w-xl break-words text-sm text-zinc-500">
             {linked
               ? `Connected${state.linkedPhone ? ` to ${state.linkedPhone}` : ""}.`
               : "Connect the dedicated BayarLah WhatsApp number before sending reminders."}
@@ -100,8 +100,8 @@ export default function WhatsAppBotPanel({
       </div>
 
       {linking ? (
-        <div className="mt-5 grid gap-5 md:grid-cols-[240px_1fr] md:items-center">
-          <div className="flex aspect-square w-full max-w-60 items-center justify-center rounded-md border border-zinc-200 bg-zinc-50">
+        <div className="mt-5 grid min-w-0 gap-5 md:grid-cols-[240px_minmax(0,1fr)] md:items-center">
+          <div className="mx-auto flex aspect-square w-full max-w-60 items-center justify-center rounded-md border border-zinc-200 bg-zinc-50 md:mx-0">
             {state.qrImageDataUrl ? (
               <Image
                 src={state.qrImageDataUrl}
@@ -118,7 +118,9 @@ export default function WhatsAppBotPanel({
           <div className="text-sm text-zinc-600">
             <p>Open WhatsApp on the bot phone, choose linked devices, then scan.</p>
             {state.sessionId ? (
-              <p className="mt-2 text-xs text-zinc-400">Session: {state.sessionId}</p>
+              <p className="mt-2 break-all text-xs text-zinc-400">
+                Session: {state.sessionId}
+              </p>
             ) : null}
           </div>
         </div>
@@ -136,11 +138,12 @@ export default function WhatsAppBotPanel({
         </p>
       ) : null}
 
-      <div className="mt-5 flex flex-wrap gap-3">
-        <form action={startWhatsappBotSession}>
+      <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+        <form action={startWhatsappBotSession} className="w-full sm:w-auto">
           <SubmitButton
             pendingLabel="Starting bot..."
             variant={linked ? "secondary" : "primary"}
+            className="w-full sm:w-auto"
           >
             {linked ? "Restart bot session" : failed ? "Try again" : "Start bot session"}
           </SubmitButton>
@@ -149,6 +152,7 @@ export default function WhatsAppBotPanel({
         {state.sessionId ? (
           <form
             action={linkDifferentWhatsappBotNumber}
+            className="w-full sm:w-auto"
             onSubmit={(event) => {
               if (
                 !window.confirm(
@@ -159,7 +163,11 @@ export default function WhatsAppBotPanel({
               }
             }}
           >
-            <SubmitButton pendingLabel="Removing old link..." variant="danger">
+            <SubmitButton
+              pendingLabel="Removing old link..."
+              variant="danger"
+              className="w-full sm:w-auto"
+            >
               Link different number
             </SubmitButton>
           </form>

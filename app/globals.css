@@ -24,3 +24,11 @@ body {
   color: var(--foreground);
   font-family: var(--font-dm-sans), Arial, Helvetica, sans-serif;
 }
+
+input:not([type="checkbox"]):not([type="hidden"]):not([type="radio"]),
+select,
+textarea {
+  min-width: 0;
+  max-width: 100%;
+  width: 100%;
+}

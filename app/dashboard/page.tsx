@@ -78,23 +78,23 @@ export default async function DashboardPage() {
   const totalUnpaidShares = unpaidShares.length;
 
   return (
-    <main className="min-h-screen bg-white px-4 py-6 text-[#0a0a0a] sm:px-6 lg:px-8">
+    <main className="min-h-screen bg-white px-4 py-5 text-[#0a0a0a] sm:px-6 sm:py-6 lg:px-8">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-8">
         <header className="flex flex-col gap-6 border-b border-[#e5e7eb] pb-6 lg:flex-row lg:items-center lg:justify-between">
-          <div>
+          <div className="min-w-0">
             <BrandLogo href="/dashboard" className="text-sm" />
             <h1 className="mt-2 text-4xl font-semibold leading-tight tracking-[-0.5px] text-[#0a0a0a] sm:text-5xl">
               Dashboard
             </h1>
-            <p className="mt-2 text-sm leading-6 text-[#5f5f5f]">
+            <p className="mt-2 break-all text-sm leading-6 text-[#5f5f5f]">
               Logged in as {clerkUser.emailAddresses[0]?.emailAddress}
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="grid grid-cols-2 gap-3 sm:flex sm:flex-wrap sm:items-center">
             <Link
               href="/expenses/new"
-              className="inline-flex items-center justify-center rounded-full bg-[#0a0a0a] px-6 py-3 text-sm font-semibold text-white"
+              className="col-span-2 inline-flex items-center justify-center rounded-full bg-[#0a0a0a] px-6 py-3 text-sm font-semibold text-white sm:col-span-1"
             >
               Create expense
             </Link>
@@ -110,7 +110,9 @@ export default async function DashboardPage() {
             >
               Profile
             </Link>
-            <UserButton />
+            <div className="col-span-2 flex justify-end sm:col-span-1">
+              <UserButton />
+            </div>
           </div>
         </header>
 
@@ -181,7 +183,7 @@ export default async function DashboardPage() {
                     >
                       <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
-                          <h3 className="truncate text-lg font-semibold">
+                          <h3 className="break-words text-lg font-semibold md:truncate">
                             {expense.description}
                           </h3>
                           <span className="rounded-full bg-[#bfdbfe] px-3 py-1 text-xs font-semibold text-[#1d4ed8]">
@@ -217,7 +219,7 @@ export default async function DashboardPage() {
                         </div>
                       </div>
 
-                      <div className="flex min-w-[150px] flex-col gap-1 text-left md:text-right">
+                      <div className="flex min-w-0 flex-col gap-1 text-left md:min-w-[150px] md:text-right">
                         <span className="text-xs font-semibold uppercase text-[#8e8e93]">
                           Unpaid
                         </span>
@@ -267,16 +269,16 @@ export default async function DashboardPage() {
 
                   return (
                     <article key={share.id} className="py-4 first:pt-0">
-                      <div className="flex items-start justify-between gap-3">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                         <div className="min-w-0">
-                          <p className="truncate font-semibold">
+                          <p className="break-words font-semibold sm:truncate">
                             {share.friend.name}
                           </p>
-                          <p className="mt-1 truncate text-sm text-[#5f5f5f]">
+                          <p className="mt-1 break-words text-sm text-[#5f5f5f] sm:truncate">
                             {share.expenseDescription}
                           </p>
                         </div>
-                        <span className="shrink-0 rounded-full bg-white px-3 py-1 text-sm font-semibold text-[#0a0a0a]">
+                        <span className="w-fit shrink-0 rounded-full bg-white px-3 py-1 text-sm font-semibold text-[#0a0a0a]">
                           {formatMoney(share.owedAmount)}
                         </span>
                       </div>
@@ -330,11 +332,11 @@ const metricToneClass: Record<MetricCardProps["tone"], string> = {
 function MetricCard({ detail, label, tone, value }: MetricCardProps) {
   return (
     <article
-      className={`${metricToneClass[tone]} flex min-h-[180px] flex-col justify-between rounded-[32px] p-6 text-white`}
+      className={`${metricToneClass[tone]} flex min-h-[160px] flex-col justify-between rounded-[28px] p-5 text-white sm:min-h-[180px] sm:rounded-[32px] sm:p-6`}
     >
       <p className="text-sm font-semibold">{label}</p>
       <div>
-        <p className="text-4xl font-semibold leading-tight tracking-[-0.5px]">
+        <p className="break-words text-3xl font-semibold leading-tight tracking-[-0.5px] sm:text-4xl">
           {value}
         </p>
         <p className="mt-3 text-sm leading-6 text-white/85">{detail}</p>
