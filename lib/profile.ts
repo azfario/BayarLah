@@ -5,10 +5,9 @@ type ProfileFields = {
   duitNowIdValue: string | null;
   duitNowRecipientName: string | null;
   duitNowQrUrl: string | null;
-  whatsappLinkStatus?: string | null;
 };
 
-export function hasProfileDetails(user: Omit<ProfileFields, "whatsappLinkStatus">) {
+function hasProfileDetails(user: ProfileFields) {
   return Boolean(
     user.fullName?.trim() &&
       user.phone?.trim() &&

@@ -9,8 +9,6 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { isDuitNowIdType } from "@/lib/duitnow";
 import { normalizeMalaysianPhone } from "@/lib/friends";
-import { createOpenWaSession, startOpenWaSession } from "@/lib/openwa";
-import { hasProfileDetails } from "@/lib/profile";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 const PROFILE_PHOTOS_BUCKET = "profile-photos";
@@ -49,9 +47,6 @@ export async function saveProfile(formData: FormData) {
     redirectToProfile("Please upload your DuitNow QR image.", redirectTo);
   }
 
-  const phoneChanged = Boolean(existingUser?.phone && existingUser.phone !== phone);
-  const profileCompletedAt = existingUser?.profileCompletedAt ?? new Date();
-
   const profilePhotoUrl = profilePhoto
     ? await uploadImage(
         profilePhoto,
@@ -80,16 +75,6 @@ export async function saveProfile(formData: FormData) {
       duitNowIdValue,
       duitNowRecipientName,
       duitNowQrUrl,
-      profileCompletedAt,
-      ...(phoneChanged
-        ? {
-            whatsappLinkStatus: "NOT_LINKED" as const,
-            whatsappSessionId: null,
-            whatsappLinkedPhone: null,
-            whatsappLinkedAt: null,
-            whatsappLinkError: null,
-          }
-        : {}),
     },
     create: {
       clerkId: clerkUser.id,
@@ -101,70 +86,11 @@ export async function saveProfile(formData: FormData) {
       duitNowIdValue,
       duitNowRecipientName,
       duitNowQrUrl,
-      whatsappLinkStatus: "NOT_LINKED",
-      profileCompletedAt,
     },
   });
 
   revalidatePath("/profile");
   redirect(redirectTo);
-}
-
-export async function startWhatsAppLink(formData: FormData) {
-  const clerkUser = await currentUser();
-  if (!clerkUser) redirect("/sign-in");
-
-  const redirectTo = getSafeRedirect(formData.get("redirectTo"));
-  const user = await prisma.user.findUnique({
-    where: { clerkId: clerkUser.id },
-  });
-
-  if (!user || !hasProfileDetails(user)) {
-    redirectToProfile("Save your profile details before linking WhatsApp.", redirectTo);
-  }
-
-  let sessionId: string;
-
-  try {
-    const session = await createOpenWaSession(createWhatsAppSessionName(user.id));
-    if (!session.id) throw new Error("OpenWA Gateway did not return a session ID.");
-    sessionId = session.id;
-  } catch (error) {
-    redirectToProfile(getErrorMessage(error), redirectTo);
-  }
-
-  await prisma.user.update({
-    where: { id: user.id },
-    data: {
-      whatsappLinkStatus: "LINKING",
-      whatsappSessionId: sessionId,
-      whatsappLinkedPhone: null,
-      whatsappLinkedAt: null,
-      whatsappLinkError: null,
-      profileCompletedAt: null,
-    },
-  });
-
-  try {
-    await startOpenWaSession(sessionId);
-  } catch (error) {
-    await prisma.user.update({
-      where: { id: user.id },
-      data: {
-        whatsappLinkStatus: "FAILED",
-        whatsappLinkError: getErrorMessage(error),
-      },
-    });
-
-    redirectToProfile(getErrorMessage(error), redirectTo);
-  }
-
-  revalidatePath("/profile");
-  redirectToProfile(
-    "WhatsApp link started. Scan the QR code to finish onboarding.",
-    redirectTo,
-    "success"
-  );
 }
 
 function getString(value: FormDataEntryValue | null) {
@@ -216,17 +142,6 @@ function getImageExtension(file: File) {
   const fromName = file.name.split(".").pop()?.toLowerCase();
   const fromType = file.type.split("/").pop()?.toLowerCase();
   return (fromName || fromType || "jpg").replace(/[^a-z0-9]/g, "") || "jpg";
-}
-
-function createWhatsAppSessionName(userId: string) {
-  const safeUserId = userId.replace(/[^a-zA-Z0-9_-]/g, "");
-  const shortUserId = safeUserId.slice(-12) || "user";
-  const nonce = randomUUID().replace(/-/g, "").slice(0, 16);
-  return `bl-${shortUserId}-${nonce}`;
-}
-
-function getErrorMessage(error: unknown) {
-  return error instanceof Error ? error.message : "Something went wrong.";
 }
 
 function redirectToProfile(

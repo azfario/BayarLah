@@ -1,12 +1,6 @@
 import { readFileSync } from "node:fs";
 import { Buffer } from "node:buffer";
 
-export type WhatsAppLinkStatusValue =
-  | "NOT_LINKED"
-  | "LINKING"
-  | "LINKED"
-  | "FAILED";
-
 export type OpenWaSession = {
   id: string;
   name?: string | null;
@@ -57,15 +51,6 @@ export type OpenWaInboundMessage = {
   mediaUrl?: string | null;
   url?: string | null;
   body?: string | null;
-};
-
-export type WhatsAppGatewaySessionStatus = {
-  status: WhatsAppLinkStatusValue;
-  sessionId: string | null;
-  qrImageDataUrl: string | null;
-  linkedPhone: string | null;
-  errorMessage: string | null;
-  updatedAt: string | null;
 };
 
 type OpenWaEnvelope<T> = {
@@ -304,15 +289,7 @@ export function getOpenWaLinkedPhone(session: OpenWaSession | null) {
   return digits ? `+${digits}` : null;
 }
 
-export function openWaPhonesMatch(expectedPhone: string | null, linkedPhone: string | null) {
-  const expectedDigits = getDigits(expectedPhone ?? "");
-  const linkedDigits = getDigits(linkedPhone ?? "");
-
-  if (!expectedDigits || !linkedDigits) return true;
-  return expectedDigits === linkedDigits;
-}
-
-export function isOpenWaSessionConnected(session: OpenWaSession | null) {
+function isOpenWaSessionConnected(session: OpenWaSession | null) {
   return mapOpenWaSessionStatus(session?.status) === "LINKED";
 }
 

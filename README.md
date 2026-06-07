@@ -1,12 +1,17 @@
 # BayarLah
-BayarLah is a Malaysian fintech hackathon app for recording group expenses and helping collectors remind friends to pay back through DuitNow details. It supports profile onboarding, friend management, manual expense entry, receipt-assisted expense creation, and WhatsApp reminder demos.
+
+BayarLah records group expenses and helps collectors send DuitNow payment
+reminders through a dedicated WhatsApp bot. It includes profile onboarding,
+friend management, manual and receipt-assisted expense entry, reminder
+scheduling, and payment-proof matching.
 
 ## How to Run
 
-Install dependencies:
+Install the app and worker dependencies:
 
 ```bash
-npm install --legacy-peer-deps
+npm ci --legacy-peer-deps
+npm --prefix workers/whatsapp ci
 ```
 
 Create environment variables from the example file:
@@ -15,21 +20,16 @@ Create environment variables from the example file:
 cp .env.example .env.local
 ```
 
-Fill in the required values in `.env.local`, then generate the Prisma client:
+Fill in the required values, set up the database, and start the app:
 
 ```bash
-npx prisma generate
-```
-
-Run the development server:
-
-```bash
+npm run db:setup
 npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000).
 
-For the local WhatsApp reminder demo, use:
+For the local app, OpenWA gateway, and worker together:
 
 ```bash
 npm run dev:demo
@@ -38,6 +38,14 @@ npm run dev:demo
 For the production Vercel, Supabase, Clerk, and NovaCloud rollout, follow
 [the deployment runbook](deploy/README.md).
 
-## Project Status
+## Verification
 
-In development. Current functionality includes authentication, profile onboarding, friend management, manual and receipt-assisted expenses, receipt parsing, split allocation, and WhatsApp reminder demo support.
+Run the same source checks used by CI:
+
+```bash
+npm run verify
+```
+
+Database cleanup migrations are intentionally separate from normal setup. Do
+not run `npm run db:cleanup-legacy` against production without following the
+backup and staged rollout steps in the deployment runbook.

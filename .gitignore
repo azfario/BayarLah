@@ -23,6 +23,7 @@
 # misc
 .DS_Store
 *.pem
+*.bak
 
 # debug
 npm-debug.log*
@@ -33,7 +34,6 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 !.env.example
-!.env.docker.example
 !.env.novacloud.example
 
 # vercel

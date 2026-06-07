@@ -1,0 +1,62 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: pk_test_ZXhhbXBsZS5jbGVyay5hY2NvdW50cy5kZXYk
+      CLERK_SECRET_KEY: sk_test_ci
+      NEXT_PUBLIC_CLERK_SIGN_IN_URL: /sign-in
+      NEXT_PUBLIC_CLERK_SIGN_UP_URL: /sign-up
+      NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL: /dashboard
+      NEXT_PUBLIC_CLERK_SIGN_UP_FALLBACK_REDIRECT_URL: /dashboard
+      NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+      SUPABASE_SERVICE_ROLE_KEY: test-service-role-key
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
+      DIRECT_URL: postgresql://postgres:postgres@localhost:5432/postgres
+      OCR_SPACE_API_KEY: test
+      GEMINI_API_KEY: test
+      GEMINI_MODEL: gemini-2.5-flash
+      OPENWA_API_BASE_URL: http://localhost:2785/api
+      OPENWA_API_KEY: test
+      BAYARLAH_BOT_ADMIN_EMAILS: admin@example.com
+      BAYARLAH_BOT_SESSION_NAME: bayarlah-bot
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            workers/whatsapp/package-lock.json
+
+      - name: Install app dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: Install worker dependencies
+        run: npm --prefix workers/whatsapp ci
+
+      - name: Verify source
+        run: npm run verify
+
+      - name: Validate Prisma schema
+        run: npx prisma validate
+
+      - name: Audit production dependencies
+        run: |
+          npm audit --omit=dev
+          npm --prefix workers/whatsapp audit --omit=dev
+
+      - name: Validate Docker Compose
+        run: |
+          cp .env.example .env.local
+          docker compose -f docker-compose.worker.yml config --quiet
+          NOVACLOUD_ENV_FILE=.env.novacloud.example docker compose --env-file .env.novacloud.example -f docker-compose.novacloud.yml config --quiet

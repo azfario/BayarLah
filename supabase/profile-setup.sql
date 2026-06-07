@@ -102,12 +102,6 @@ CREATE TABLE IF NOT EXISTS "User" (
   "duitNowIdValue" TEXT,
   "duitNowRecipientName" TEXT,
   "duitNowQrUrl" TEXT,
-  "whatsappLinkStatus" "WhatsappLinkStatus" NOT NULL DEFAULT 'NOT_LINKED',
-  "whatsappSessionId" TEXT,
-  "whatsappLinkedPhone" TEXT,
-  "whatsappLinkedAt" TIMESTAMP(3),
-  "whatsappLinkError" TEXT,
-  "profileCompletedAt" TIMESTAMP(3),
   "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
   "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -123,18 +117,6 @@ ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "duitNowIdType" "DuitNowIdType";
 ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "duitNowIdValue" TEXT;
 ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "duitNowRecipientName" TEXT;
 ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "duitNowQrUrl" TEXT;
-ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "whatsappLinkStatus" "WhatsappLinkStatus" NOT NULL DEFAULT 'NOT_LINKED';
-ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "whatsappSessionId" TEXT;
-ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "whatsappLinkedPhone" TEXT;
-ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "whatsappLinkedAt" TIMESTAMP(3);
-ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "whatsappLinkError" TEXT;
-ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "profileCompletedAt" TIMESTAMP(3);
-ALTER TABLE "User" ALTER COLUMN "whatsappLinkStatus" SET DEFAULT 'NOT_LINKED';
-UPDATE "User"
-SET "whatsappLinkStatus" = 'NOT_LINKED'
-WHERE "whatsappLinkStatus" IS NULL;
-ALTER TABLE "User" ALTER COLUMN "whatsappLinkStatus" SET NOT NULL;
-CREATE UNIQUE INDEX IF NOT EXISTS "User_whatsappSessionId_key" ON "User"("whatsappSessionId");
 
 CREATE TABLE IF NOT EXISTS "WhatsappBotSession" (
   "id" TEXT NOT NULL,

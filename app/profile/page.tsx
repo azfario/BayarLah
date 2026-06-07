@@ -154,6 +154,8 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
               {user.profilePhotoUrl ? (
                 <div className="flex flex-col gap-2">
                   <span className="text-sm font-medium">Current photo</span>
+                  {/* User-upload hosts vary by environment, so render the stored URL directly. */}
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={user.profilePhotoUrl}
                     alt="Current profile"
@@ -165,6 +167,8 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
               {user.duitNowQrUrl ? (
                 <div className="flex flex-col gap-2">
                   <span className="text-sm font-medium">Current QR</span>
+                  {/* User-upload hosts vary by environment, so render the stored URL directly. */}
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={user.duitNowQrUrl}
                     alt="Current DuitNow QR"

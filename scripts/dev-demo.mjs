@@ -180,10 +180,11 @@ function printBanner(currentEnv) {
   console.log("");
   console.log("Test flow:");
   console.log("1. Open http://localhost:3000");
-  console.log("2. Complete profile and click Start WhatsApp link");
-  console.log("3. Scan the WhatsApp QR from your phone");
-  console.log("4. Create an expense with a real recipient phone");
-  console.log("5. Click Send now and watch the worker log for SENT");
+  console.log("2. Complete the collector profile");
+  console.log("3. Visit /admin/whatsapp-bot with a configured admin account");
+  console.log("4. Start the bot session and scan the WhatsApp QR");
+  console.log("5. Create an expense with a real recipient phone");
+  console.log("6. Click Send now and watch the worker log for SENT");
   console.log("");
   console.log("Press Ctrl+C to stop the app, OpenWA Gateway, and worker.");
   console.log("");

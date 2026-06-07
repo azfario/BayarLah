@@ -116,8 +116,10 @@ docker compose --env-file .env.novacloud -f docker-compose.novacloud.yml logs --
 ```
 
 The OpenWA entrypoint removes only stale Chromium `SingletonLock`,
-`SingletonCookie`, and `SingletonSocket` files before startup. WhatsApp
-authentication data remains in the persistent `openwa_data` volume.
+`SingletonCookie`, and `SingletonSocket` files before startup. OpenWA writes
+its API key to `/app/data/.api-key`; the worker reads that file through a
+read-only mount of the persistent `openwa_data` volume. WhatsApp authentication
+data remains in the same volume.
 
 ## 4. Configure Vercel
 
@@ -134,7 +136,6 @@ NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
 NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL=/dashboard
 NEXT_PUBLIC_CLERK_SIGN_UP_FALLBACK_REDIRECT_URL=/dashboard
 NEXT_PUBLIC_SUPABASE_URL
-NEXT_PUBLIC_SUPABASE_ANON_KEY
 SUPABASE_SERVICE_ROLE_KEY
 DATABASE_URL
 DIRECT_URL
@@ -143,15 +144,45 @@ GEMINI_API_KEY
 GEMINI_MODEL
 OPENWA_API_BASE_URL=https://wa.example.com/api
 OPENWA_API_KEY
-OPENWA_WEBHOOK_SECRET
 BAYARLAH_BOT_ADMIN_EMAILS
 BAYARLAH_BOT_SESSION_NAME=bayarlah-bot
 ```
 
-Generate `OPENWA_WEBHOOK_SECRET` separately from the API key. Production
-requests to `/api/openwa/payment-proof-webhook` fail closed when it is absent.
+Incoming payment proofs are delivered to the worker-only webhook inside the
+NovaCloud Docker network. No public Vercel payment-proof webhook is required.
 
-## 5. Smoke Test
+## 5. Existing Production Database Cleanup
+
+The application no longer uses the legacy per-user WhatsApp session columns.
+Their removal is deliberately separate from deployment so an existing
+production database remains compatible during observation.
+
+First deploy the new application and worker code without running the cleanup
+migration. Complete the smoke test in the next section and observe production
+before changing the database.
+
+Before the migration, create a Supabase backup or use `pg_dump` with the direct
+database URL:
+
+```bash
+mkdir -p backups
+pg_dump "$DIRECT_URL" --format=custom \
+  --file="backups/supabase-before-legacy-cleanup-$(date +%Y%m%d-%H%M%S).dump"
+```
+
+Then run the idempotent cleanup:
+
+```bash
+npm run db:cleanup-legacy
+```
+
+This drops only the obsolete `User` WhatsApp-link fields and
+`profileCompletedAt`. It does not remove users, friends, expenses, reminders,
+bot sessions, or payment proofs. After this migration, an older application
+deployment that still expects those columns cannot be used without restoring
+the database backup.
+
+## 6. Smoke Test
 
 Verify infrastructure:
 
@@ -171,7 +202,7 @@ Then verify the product flow:
 6. Reply with a payment proof and confirm it is stored and matched.
 7. Restart the stack and confirm the WhatsApp session remains linked.
 
-## 6. Backup, Update, And Roll Back
+## 7. Backup, Update, And Roll Back
 
 Never run `docker compose down -v`.
 
@@ -197,7 +228,9 @@ docker compose --env-file .env.novacloud -f docker-compose.novacloud.yml ps
 
 For NovaCloud rollback, check out the previous known-good commit and run the
 same `up -d --build` command without deleting volumes. For Vercel rollback,
-promote the previous production deployment in the Vercel dashboard.
+promote the previous production deployment in the Vercel dashboard. This is
+safe before the legacy database cleanup; afterward, roll forward or restore
+the matching database backup before using an older application version.
 
 Monitor `docker compose ps`, recent logs, `free -h`, and `df -h` before the
 demo. The Compose configuration rotates each container log at 10 MB and keeps

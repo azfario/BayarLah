@@ -1,5 +1,6 @@
 import { spawn } from "node:child_process";
 import fs from "node:fs";
+import path from "node:path";
 
 const env = {
   ...loadEnvFile(".env.local"),
@@ -7,9 +8,16 @@ const env = {
 };
 const directUrl = env.DIRECT_URL?.trim();
 const databaseUrl = directUrl || env.DATABASE_URL?.trim();
+const sqlFile = process.argv[2] || "supabase/profile-setup.sql";
+const sqlPath = path.resolve(sqlFile);
 
 if (!databaseUrl) {
-  console.error("Set DIRECT_URL or DATABASE_URL before running npm run db:setup.");
+  console.error("Set DIRECT_URL or DATABASE_URL before running database setup.");
+  process.exit(1);
+}
+
+if (!fs.existsSync(sqlPath)) {
+  console.error(`SQL file not found: ${sqlFile}`);
   process.exit(1);
 }
 
@@ -21,7 +29,7 @@ const child = spawn(
     "db",
     "execute",
     "--file",
-    "supabase/profile-setup.sql",
+    sqlPath,
     "--schema",
     "prisma/schema.prisma",
   ],

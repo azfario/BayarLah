@@ -69,12 +69,6 @@ model User {
   duitNowIdValue       String?
   duitNowRecipientName String?
   duitNowQrUrl         String?
-  whatsappLinkStatus   WhatsappLinkStatus @default(NOT_LINKED)
-  whatsappSessionId    String?            @unique
-  whatsappLinkedPhone  String?
-  whatsappLinkedAt     DateTime?
-  whatsappLinkError    String?            @db.Text
-  profileCompletedAt   DateTime?
   createdAt            DateTime           @default(now())
   updatedAt            DateTime           @updatedAt
   friends              Friend[]
