@@ -43,6 +43,12 @@ enum WhatsappReminderAttemptStatus {
   FAILED
 }
 
+enum WhatsappInboundMessageStatus {
+  PROCESSING
+  PROCESSED
+  FAILED
+}
+
 enum WhatsappLinkStatus {
   NOT_LINKED
   LINKING
@@ -59,8 +65,8 @@ enum PaymentProofStatus {
 }
 
 model User {
-  id                   String             @id @default(cuid())
-  clerkId              String             @unique
+  id                   String         @id @default(cuid())
+  clerkId              String         @unique
   email                String
   fullName             String?
   phone                String?
@@ -69,8 +75,8 @@ model User {
   duitNowIdValue       String?
   duitNowRecipientName String?
   duitNowQrUrl         String?
-  createdAt            DateTime           @default(now())
-  updatedAt            DateTime           @updatedAt
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
   friends              Friend[]
   expenses             Expense[]
   paymentProofs        PaymentProof[]
@@ -85,6 +91,22 @@ model WhatsappBotSession {
   linkError   String?            @db.Text
   createdAt   DateTime           @default(now())
   updatedAt   DateTime           @updatedAt
+}
+
+model WhatsappInboundMessage {
+  senderSessionId   String
+  providerMessageId String
+  status            WhatsappInboundMessageStatus @default(PROCESSING)
+  source            String
+  outcome           String?
+  claimedAt         DateTime                     @default(now())
+  processedAt       DateTime?
+  errorMessage      String?                      @db.Text
+  createdAt         DateTime                     @default(now())
+  updatedAt         DateTime                     @updatedAt
+
+  @@id([senderSessionId, providerMessageId])
+  @@index([status, claimedAt])
 }
 
 model Friend {

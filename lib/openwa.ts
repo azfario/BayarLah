@@ -146,7 +146,26 @@ export async function ensureOpenWaMessageReceivedWebhook(input: {
       webhook.events.includes("message.received")
   );
 
-  if (existing) return existing;
+  if (existing) {
+    const duplicates = webhooks.filter(
+      (webhook) =>
+        webhook.id !== existing.id &&
+        webhook.url === input.url &&
+        webhook.active !== false &&
+        webhook.events.includes("message.received")
+    );
+    await Promise.all(
+      duplicates.map((webhook) =>
+        requestOpenWa<unknown>(
+          `/sessions/${encodeURIComponent(input.sessionId)}/webhooks/${encodeURIComponent(
+            webhook.id
+          )}`,
+          { method: "DELETE" }
+        )
+      )
+    );
+    return existing;
+  }
 
   return requestOpenWa<OpenWaWebhook>(
     `/sessions/${encodeURIComponent(input.sessionId)}/webhooks`,

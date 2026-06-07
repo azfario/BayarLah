@@ -16,6 +16,10 @@ import {
 } from "../../lib/openwa.js";
 import { handleInboundPaymentProofImage } from "../../lib/payment-proof-inbound.js";
 import {
+  classifyWhatsappMessage,
+  getWhatsappMessageId,
+} from "../../lib/whatsapp-inbound.js";
+import {
   buildWhatsAppReminderMessage,
   getNextReminderAtFromCadence,
   getRetryReminderAt,
@@ -75,7 +79,6 @@ const runOnce =
   process.argv.includes("--once");
 
 let shuttingDown = false;
-const processedInboundMessageIds = new Set<string>();
 const webhookRegisteredSessions = new Set<string>();
 let webhookServer: ReturnType<typeof createServer> | null = null;
 
@@ -183,77 +186,104 @@ async function processInboundPaymentProofMessages(
     );
 
     for (const message of messages) {
-      if (!isInboundImageMessage(message)) continue;
+      if (classifyWhatsappMessage(message) !== "INBOUND_IMAGE") continue;
 
-      const messageId = getInboundMessageId(message);
-      if (!messageId || processedInboundMessageIds.has(messageId)) continue;
+      const messageId = getWhatsappMessageId(message);
+      if (!messageId) continue;
 
-      processedInboundMessageIds.add(messageId);
-      const debtorPhone = getInboundMessagePhone(message);
-      const inboundChatId = message.chatId;
-      const inboundSenderId = message.from;
-      const route = await resolveWhatsappBotInboundRoute(prisma, {
-        botSessionId: botSession.sessionId,
-        debtorPhone,
-        inboundChatId,
-        inboundSenderId,
-        messageId,
+      const claimed = await claimInboundMessage({
+        senderSessionId: botSession.sessionId,
+        providerMessageId: messageId,
+        source: "POLL",
       });
+      if (!claimed) continue;
 
-      if (!route) {
-        await sendUnmatchedPaymentProofReply({
-          sessionId: botSession.sessionId,
+      try {
+        const debtorPhone = getInboundMessagePhone(message);
+        const inboundChatId = message.chatId;
+        const inboundSenderId = message.from;
+        const route = await resolveWhatsappBotInboundRoute(prisma, {
+          botSessionId: botSession.sessionId,
           debtorPhone,
           inboundChatId,
           inboundSenderId,
           messageId,
         });
+
+        if (!route) {
+          await completeInboundMessage({
+            senderSessionId: botSession.sessionId,
+            providerMessageId: messageId,
+            outcome: "UNMATCHED",
+          });
+          await sendUnmatchedPaymentProofReply({
+            sessionId: botSession.sessionId,
+            debtorPhone,
+            inboundChatId,
+            inboundSenderId,
+            messageId,
+          });
+          processed += 1;
+          console.log(
+            `Skipped unmatched inbound payment proof ${messageId} from ${
+              debtorPhone ?? inboundSenderId ?? inboundChatId ?? "unknown"
+            }.`
+          );
+          continue;
+        }
+
+        const media = await downloadOpenWaMessageMedia({
+          sessionId: botSession.sessionId,
+          messageId,
+          mediaUrl: message.mediaUrl ?? message.url,
+        });
+
+        const result = await handleInboundPaymentProofImage({
+          collectorId: route.collectorId,
+          debtorPhone: debtorPhone ?? route.debtorPhone,
+          inboundChatId,
+          inboundSenderId,
+          senderSessionId: botSession.sessionId,
+          messageId,
+          bytes: media.bytes,
+          contentType: message.mimetype ?? message.mimeType ?? media.contentType,
+        });
+
+        await completeInboundMessage({
+          senderSessionId: botSession.sessionId,
+          providerMessageId: messageId,
+          outcome: result.decision.status,
+        });
+        await sendPaymentProofWorkerNotifications({
+          botSessionId: botSession.sessionId,
+          collector: {
+            id: route.collectorId,
+            fullName: route.collectorFullName,
+            phone: route.collectorPhone,
+          },
+          debtorPhone: debtorPhone ?? route.debtorPhone,
+          inboundChatId,
+          inboundSenderId,
+          paymentProofId: result.paymentProofId,
+          status: result.decision.status,
+        });
+
         processed += 1;
         console.log(
-          `Skipped unmatched inbound payment proof ${messageId} from ${
+          `Inbound payment proof ${messageId} from ${
             debtorPhone ?? inboundSenderId ?? inboundChatId ?? "unknown"
-          }.`
+          }: ${result.decision.status}.`
         );
-        continue;
+      } catch (error) {
+        await failInboundMessage({
+          senderSessionId: botSession.sessionId,
+          providerMessageId: messageId,
+          error,
+        });
+        console.error(
+          `Failed inbound payment proof ${messageId}: ${getErrorMessage(error)}`
+        );
       }
-
-      const media = await downloadOpenWaMessageMedia({
-        sessionId: botSession.sessionId,
-        messageId,
-        mediaUrl: message.mediaUrl ?? message.url,
-      });
-
-      const result = await handleInboundPaymentProofImage({
-        collectorId: route.collectorId,
-        debtorPhone: debtorPhone ?? route.debtorPhone,
-        inboundChatId,
-        inboundSenderId,
-        senderSessionId: botSession.sessionId,
-        messageId,
-        bytes: media.bytes,
-        contentType: message.mimetype ?? message.mimeType ?? media.contentType,
-      });
-
-      await sendPaymentProofWorkerNotifications({
-        botSessionId: botSession.sessionId,
-        collector: {
-          id: route.collectorId,
-          fullName: route.collectorFullName,
-          phone: route.collectorPhone,
-        },
-        debtorPhone: debtorPhone ?? route.debtorPhone,
-        inboundChatId,
-        inboundSenderId,
-        paymentProofId: result.paymentProofId,
-        status: result.decision.status,
-      });
-
-      processed += 1;
-      console.log(
-        `Inbound payment proof ${messageId} from ${
-          debtorPhone ?? inboundSenderId ?? inboundChatId ?? "unknown"
-        }: ${result.decision.status}.`
-      );
     }
   } catch (error) {
     console.error(
@@ -269,8 +299,9 @@ async function processInboundPaymentProofWebhook(payload: unknown) {
     return { ok: false, status: 400, error: "Invalid webhook payload." };
   }
 
-  if (isOutgoingWebhookPayload(payload)) {
-    return { ok: true, skipped: "outgoing_message" };
+  const classification = classifyWhatsappMessage(payload);
+  if (classification !== "INBOUND_IMAGE") {
+    return { ok: true, skipped: classification.toLowerCase() };
   }
 
   const sessionId = getPayloadString(payload, ["sessionId", "session.id"]);
@@ -287,38 +318,9 @@ async function processInboundPaymentProofWebhook(payload: unknown) {
   const inboundChatId = getWebhookInboundChatId(payload);
   const inboundSenderId = getWebhookInboundSenderId(payload);
 
-  const messageId =
-    getPayloadString(payload, [
-      "data.id",
-      "data.messageId",
-      "data._serialized",
-      "data.waMessageId",
-      "data.message.id",
-      "message.id",
-      "messageId",
-      "id",
-      "waMessageId",
-      "message.waMessageId",
-    ]) ?? `${sessionId}-${Date.now()}`;
-
-  const route = await resolveWhatsappBotInboundRoute(prisma, {
-    botSessionId: botSession.sessionId,
-    debtorPhone,
-    inboundChatId,
-    inboundSenderId,
-    messageId,
-  });
-
-  if (!route) {
-    await sendUnmatchedPaymentProofReply({
-      sessionId: botSession.sessionId,
-      debtorPhone,
-      inboundChatId,
-      inboundSenderId,
-      messageId,
-    });
-
-    return { ok: true, skipped: "unmatched_payment_proof" };
+  const messageId = getWhatsappMessageId(payload);
+  if (!messageId) {
+    return { ok: true, skipped: "missing_message_id" };
   }
 
   const media = await getWebhookImageMedia(payload);
@@ -330,43 +332,91 @@ async function processInboundPaymentProofWebhook(payload: unknown) {
     };
   }
 
-  const result = await handleInboundPaymentProofImage({
-    collectorId: route.collectorId,
-    debtorPhone: debtorPhone ?? route.debtorPhone,
-    inboundChatId,
-    inboundSenderId,
+  const claimed = await claimInboundMessage({
     senderSessionId: botSession.sessionId,
-    messageId,
-    bytes: media.bytes,
-    contentType: media.contentType,
+    providerMessageId: messageId,
+    source: "WEBHOOK",
   });
+  if (!claimed) {
+    return { ok: true, skipped: "duplicate_message" };
+  }
 
-  await sendPaymentProofWorkerNotifications({
-    botSessionId: botSession.sessionId,
-    collector: {
-      id: route.collectorId,
-      fullName: route.collectorFullName,
-      phone: route.collectorPhone,
-    },
-    debtorPhone: debtorPhone ?? route.debtorPhone,
-    inboundChatId,
-    inboundSenderId,
-    paymentProofId: result.paymentProofId,
-    status: result.decision.status,
-  });
+  try {
+    const route = await resolveWhatsappBotInboundRoute(prisma, {
+      botSessionId: botSession.sessionId,
+      debtorPhone,
+      inboundChatId,
+      inboundSenderId,
+      messageId,
+    });
 
-  console.log(
-    `Inbound payment proof webhook ${messageId} from ${
-      debtorPhone ?? inboundSenderId ?? inboundChatId ?? "unknown"
-    }: ${result.decision.status}.`
-  );
+    if (!route) {
+      await completeInboundMessage({
+        senderSessionId: botSession.sessionId,
+        providerMessageId: messageId,
+        outcome: "UNMATCHED",
+      });
+      await sendUnmatchedPaymentProofReply({
+        sessionId: botSession.sessionId,
+        debtorPhone,
+        inboundChatId,
+        inboundSenderId,
+        messageId,
+      });
 
-  return {
-    ok: true,
-    status: result.decision.status,
-    paymentProofId: result.paymentProofId,
-    reviewReason: result.decision.reviewReason,
-  };
+      return { ok: true, skipped: "unmatched_payment_proof" };
+    }
+
+    const result = await handleInboundPaymentProofImage({
+      collectorId: route.collectorId,
+      debtorPhone: debtorPhone ?? route.debtorPhone,
+      inboundChatId,
+      inboundSenderId,
+      senderSessionId: botSession.sessionId,
+      messageId,
+      bytes: media.bytes,
+      contentType: media.contentType,
+    });
+
+    await completeInboundMessage({
+      senderSessionId: botSession.sessionId,
+      providerMessageId: messageId,
+      outcome: result.decision.status,
+    });
+    await sendPaymentProofWorkerNotifications({
+      botSessionId: botSession.sessionId,
+      collector: {
+        id: route.collectorId,
+        fullName: route.collectorFullName,
+        phone: route.collectorPhone,
+      },
+      debtorPhone: debtorPhone ?? route.debtorPhone,
+      inboundChatId,
+      inboundSenderId,
+      paymentProofId: result.paymentProofId,
+      status: result.decision.status,
+    });
+
+    console.log(
+      `Inbound payment proof webhook ${messageId} from ${
+        debtorPhone ?? inboundSenderId ?? inboundChatId ?? "unknown"
+      }: ${result.decision.status}.`
+    );
+
+    return {
+      ok: true,
+      status: result.decision.status,
+      paymentProofId: result.paymentProofId,
+      reviewReason: result.decision.reviewReason,
+    };
+  } catch (error) {
+    await failInboundMessage({
+      senderSessionId: botSession.sessionId,
+      providerMessageId: messageId,
+      error,
+    });
+    throw error;
+  }
 }
 
 async function processDueReminders(botSession: ActiveBotSession | null) {
@@ -565,6 +615,88 @@ async function ensureExpenseSharePaymentCode(shareId: string) {
   throw new Error("Could not generate a unique payment code.");
 }
 
+async function claimInboundMessage(input: {
+  senderSessionId: string;
+  providerMessageId: string;
+  source: "POLL" | "WEBHOOK";
+}) {
+  const claimedAt = new Date();
+  const staleBefore = new Date(claimedAt.getTime() - 5 * 60_000);
+  const rows = await prisma.$queryRaw<{ providerMessageId: string }[]>`
+    INSERT INTO "WhatsappInboundMessage" (
+      "senderSessionId",
+      "providerMessageId",
+      "status",
+      "source",
+      "claimedAt",
+      "createdAt",
+      "updatedAt"
+    )
+    VALUES (
+      ${input.senderSessionId},
+      ${input.providerMessageId},
+      'PROCESSING'::"WhatsappInboundMessageStatus",
+      ${input.source},
+      ${claimedAt},
+      ${claimedAt},
+      ${claimedAt}
+    )
+    ON CONFLICT ("senderSessionId", "providerMessageId") DO UPDATE SET
+      "status" = 'PROCESSING'::"WhatsappInboundMessageStatus",
+      "source" = EXCLUDED."source",
+      "claimedAt" = EXCLUDED."claimedAt",
+      "processedAt" = NULL,
+      "errorMessage" = NULL,
+      "updatedAt" = EXCLUDED."updatedAt"
+    WHERE "WhatsappInboundMessage"."status" = 'FAILED'::"WhatsappInboundMessageStatus"
+      OR (
+        "WhatsappInboundMessage"."status" = 'PROCESSING'::"WhatsappInboundMessageStatus"
+        AND "WhatsappInboundMessage"."claimedAt" <= ${staleBefore}
+      )
+    RETURNING "providerMessageId"
+  `;
+
+  return rows.length === 1;
+}
+
+async function completeInboundMessage(input: {
+  senderSessionId: string;
+  providerMessageId: string;
+  outcome: string;
+}) {
+  const processedAt = new Date();
+  await prisma.$executeRaw`
+    UPDATE "WhatsappInboundMessage"
+    SET
+      "status" = 'PROCESSED'::"WhatsappInboundMessageStatus",
+      "outcome" = ${input.outcome},
+      "processedAt" = ${processedAt},
+      "errorMessage" = NULL,
+      "updatedAt" = ${processedAt}
+    WHERE "senderSessionId" = ${input.senderSessionId}
+      AND "providerMessageId" = ${input.providerMessageId}
+      AND "status" = 'PROCESSING'::"WhatsappInboundMessageStatus"
+  `;
+}
+
+async function failInboundMessage(input: {
+  senderSessionId: string;
+  providerMessageId: string;
+  error: unknown;
+}) {
+  const failedAt = new Date();
+  await prisma.$executeRaw`
+    UPDATE "WhatsappInboundMessage"
+    SET
+      "status" = 'FAILED'::"WhatsappInboundMessageStatus",
+      "errorMessage" = ${getErrorMessage(input.error)},
+      "updatedAt" = ${failedAt}
+    WHERE "senderSessionId" = ${input.senderSessionId}
+      AND "providerMessageId" = ${input.providerMessageId}
+      AND "status" = 'PROCESSING'::"WhatsappInboundMessageStatus"
+  `;
+}
+
 function isUniqueConstraintError(error: unknown) {
   if (!(error instanceof Prisma.PrismaClientKnownRequestError)) return false;
 
@@ -757,24 +889,6 @@ function extractOpenWaSerializedChatId(value: string) {
   return match?.[1] ?? null;
 }
 
-function isInboundImageMessage(message: OpenWaInboundMessage) {
-  if (message.fromMe) return false;
-  if ((message.direction ?? "").toLowerCase() === "outgoing") return false;
-
-  const type = (message.type ?? "").toLowerCase();
-  const mimeType = (message.mimetype ?? message.mimeType ?? "").toLowerCase();
-
-  return (
-    message.hasMedia === true ||
-    type === "image" ||
-    mimeType.startsWith("image/")
-  );
-}
-
-function getInboundMessageId(message: OpenWaInboundMessage) {
-  return message.id ?? message.messageId ?? message._serialized ?? null;
-}
-
 function getInboundMessagePhone(message: OpenWaInboundMessage) {
   const chatId = message.from ?? message.chatId ?? "";
   if (chatId.includes("@lid")) return null;
@@ -782,23 +896,6 @@ function getInboundMessagePhone(message: OpenWaInboundMessage) {
 
   if (!digits) return null;
   return `+${digits}`;
-}
-
-function isOutgoingWebhookPayload(payload: object) {
-  const direction = getPayloadString(payload, [
-    "direction",
-    "message.direction",
-    "data.direction",
-    "data.message.direction",
-  ]);
-  const fromMe = getPayloadValue(payload, [
-    "fromMe",
-    "message.fromMe",
-    "data.fromMe",
-    "data.message.fromMe",
-  ]);
-
-  return direction?.toLowerCase() === "outgoing" || fromMe === true;
 }
 
 function getWebhookDebtorPhone(payload: object) {

@@ -50,3 +50,4 @@ workers/**/_IGNORE_*/
 workers/**/*.data.json
 workers/**/logs/
 AGENTS.md
+DESIGN.md
