@@ -33,7 +33,7 @@ export default function DuitNowIdFields({
             setIdType(isDuitNowIdType(value) ? value : "");
           }}
           required
-          className="h-10 rounded-md border border-[#e5e7eb] bg-white px-4 outline-none focus:border-2 focus:border-[#1d4ed8]"
+          className="h-11 rounded-lg border border-[#e5e7eb] bg-white px-4 text-base outline-none focus:border-2 focus:border-[#1d4ed8]"
         >
           <option value="" disabled>
             Select type
@@ -53,7 +53,7 @@ export default function DuitNowIdFields({
           defaultValue={defaultValue ?? ""}
           required
           placeholder={getDuitNowIdPlaceholder(idType)}
-          className="h-10 rounded-md border border-[#e5e7eb] bg-white px-4 outline-none placeholder:text-[#8e8e93] focus:border-2 focus:border-[#1d4ed8]"
+          className="h-11 rounded-lg border border-[#e5e7eb] bg-white px-4 text-base outline-none placeholder:text-[#8e8e93] focus:border-2 focus:border-[#1d4ed8]"
         />
       </label>
     </>
