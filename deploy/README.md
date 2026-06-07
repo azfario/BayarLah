@@ -235,3 +235,35 @@ the matching database backup before using an older application version.
 Monitor `docker compose ps`, recent logs, `free -h`, and `df -h` before the
 demo. The Compose configuration rotates each container log at 10 MB and keeps
 three files.
+
+## 8. NovaCloud Command Aliases
+
+These aliases shorten common production commands. Add them to `~/.bashrc` on
+the NovaCloud VM, then run `source ~/.bashrc`. Run them from the BayarLah
+repository directory because they use relative Compose and environment paths.
+
+```bash
+alias blps='docker compose --env-file .env.novacloud -f docker-compose.novacloud.yml ps'
+alias blrw='docker compose --env-file .env.novacloud -f docker-compose.novacloud.yml up -d --build whatsapp-worker'
+alias blra='docker compose --env-file .env.novacloud -f docker-compose.novacloud.yml up -d --build'
+alias blwlogs='docker compose --env-file .env.novacloud -f docker-compose.novacloud.yml logs -f --tail=200 whatsapp-worker'
+alias blowalogs='docker compose --env-file .env.novacloud -f docker-compose.novacloud.yml logs -f --tail=200 openwa-api'
+alias bllogs='docker compose --env-file .env.novacloud -f docker-compose.novacloud.yml logs -f --tail=200'
+alias blrestart='docker compose --env-file .env.novacloud -f docker-compose.novacloud.yml restart whatsapp-worker'
+alias blup='git pull --ff-only && docker compose --env-file .env.novacloud -f docker-compose.novacloud.yml pull && docker compose --env-file .env.novacloud -f docker-compose.novacloud.yml up -d --build'
+```
+
+- `blps`: show the current status and health of all production containers.
+- `blrw`: rebuild and restart only the WhatsApp worker after worker code changes.
+- `blra`: rebuild and restart the full NovaCloud stack.
+- `blwlogs`: follow the latest WhatsApp worker logs.
+- `blowalogs`: follow the latest OpenWA API logs.
+- `bllogs`: follow logs from every service.
+- `blrestart`: restart the WhatsApp worker without rebuilding its image.
+- `blup`: pull the latest Git commit and container images, then rebuild the
+  full stack.
+
+Database migrations are not included in these aliases. Apply
+`supabase/migrations/20260607_add_whatsapp_inbound_idempotency.sql` manually
+through the Supabase SQL Editor before deploying the worker version that uses
+the `WhatsappInboundMessage` table.
