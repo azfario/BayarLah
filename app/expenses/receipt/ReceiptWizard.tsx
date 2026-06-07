@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useMemo, useState } from "react";
+import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import ReminderFrequencyPicker from "@/components/ReminderFrequencyPicker";
 import { parseReceipt, saveReceiptExpense } from "@/lib/actions/receipts";
@@ -68,10 +68,18 @@ type Assignment = {
   participantKey: string;
 };
 
+type MobileStep = "DETAILS" | "PEOPLE" | "ITEMS" | "REVIEW";
+
 const initialParseState: ReceiptParseState = {};
 const initialSaveState: ReceiptSaveState = {};
 const TARGET_RECEIPT_BYTES = 2.5 * 1024 * 1024;
 const MAX_RECEIPT_DIMENSION = 1600;
+const MOBILE_STEPS: { key: MobileStep; label: string }[] = [
+  { key: "DETAILS", label: "Details" },
+  { key: "PEOPLE", label: "People" },
+  { key: "ITEMS", label: "Items" },
+  { key: "REVIEW", label: "Review" },
+];
 
 export default function ReceiptWizard({
   friends,
@@ -84,6 +92,7 @@ export default function ReceiptWizard({
   const [parseState, setParseState] = useState<ReceiptParseState>(initialParseState);
   const [receiptFile, setReceiptFile] = useState<File | null>(null);
   const [receiptPreviewUrl, setReceiptPreviewUrl] = useState("");
+  const [receiptInputVersion, setReceiptInputVersion] = useState(0);
   const [imageStatus, setImageStatus] = useState("");
   const [isParsing, setIsParsing] = useState(false);
   const [draft, setDraft] = useState<ClientReceiptDraft | null>(null);
@@ -96,7 +105,13 @@ export default function ReceiptWizard({
   ]);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [selectedItemKey, setSelectedItemKey] = useState("");
-  const [nextAssignmentNumber, setNextAssignmentNumber] = useState(1);
+  const nextAssignmentNumber = useRef(1);
+  const [mobileStep, setMobileStep] = useState<MobileStep>("DETAILS");
+  const [mobileValidationStep, setMobileValidationStep] =
+    useState<MobileStep | null>(null);
+  const [mobileEditingItemKey, setMobileEditingItemKey] = useState("");
+  const [showNeedsAssignmentOnly, setShowNeedsAssignmentOnly] = useState(false);
+  const mobileFlowRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!parseState.draft) return;
@@ -109,7 +124,11 @@ export default function ReceiptWizard({
     setInlineFriends([createInlineFriendRow(1)]);
     setAssignments([]);
     setSelectedItemKey("");
-    setNextAssignmentNumber(1);
+    nextAssignmentNumber.current = 1;
+    setMobileStep("DETAILS");
+    setMobileValidationStep(null);
+    setMobileEditingItemKey("");
+    setShowNeedsAssignmentOnly(false);
   }, [parseState.draft]);
 
   useEffect(() => {
@@ -117,6 +136,23 @@ export default function ReceiptWizard({
       if (receiptPreviewUrl) URL.revokeObjectURL(receiptPreviewUrl);
     };
   }, [receiptPreviewUrl]);
+
+  useEffect(() => {
+    if (!mobileEditingItemKey) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") setMobileEditingItemKey("");
+    }
+
+    window.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [mobileEditingItemKey]);
 
   const selectedFriends = useMemo(
     () => friends.filter((friend) => selectedFriendIds.includes(friend.id)),
@@ -197,6 +233,15 @@ export default function ReceiptWizard({
           )
         : "",
     [assignments, draft, participants, review, splitMode]
+  );
+  const mobileStepErrors = useMemo(
+    () =>
+      review
+        ? review.errors.filter(
+            (error) => getMobileErrorStep(error, splitMode) === mobileStep
+          )
+        : [],
+    [mobileStep, review, splitMode]
   );
 
   function addSelectedFriend(friendId: string) {
@@ -282,15 +327,7 @@ export default function ReceiptWizard({
       current
         ? {
             ...current,
-            items: [
-              ...current.items,
-              {
-                key: `item-${getNextItemNumber(current.items)}`,
-                name: "",
-                quantity: "1",
-                unitAmount: "",
-              },
-            ],
+            items: [...current.items, createClientReceiptItem(current.items)],
           }
         : current
     );
@@ -320,16 +357,26 @@ export default function ReceiptWizard({
     const item = draft.items.find((current) => current.key === selectedItemKey);
     if (!item || getRemainingQuantity(item, assignments) <= 0) return;
 
-    const assignmentId = `assignment-${nextAssignmentNumber}`;
-    setNextAssignmentNumber((current) => current + 1);
-    setAssignments((current) => [
-      ...current,
-      { id: assignmentId, itemKey: selectedItemKey, participantKey },
-    ]);
+    assignItem(selectedItemKey, participantKey);
 
     if (getRemainingQuantity(item, assignments) <= 1) {
       setSelectedItemKey("");
     }
+  }
+
+  function assignItem(itemKey: string, participantKey: string) {
+    if (!draft) return;
+
+    const item = draft.items.find((current) => current.key === itemKey);
+    if (!item) return;
+
+    const assignmentId = `assignment-${nextAssignmentNumber.current}`;
+    nextAssignmentNumber.current += 1;
+    setAssignments((current) =>
+      getRemainingQuantity(item, current) <= 0
+        ? current
+        : [...current, { id: assignmentId, itemKey, participantKey }]
+    );
   }
 
   function removeAssignment(assignmentId: string) {
@@ -339,14 +386,62 @@ export default function ReceiptWizard({
   }
 
   function updateReceiptFile(file: File | null) {
+    if (!file) setReceiptInputVersion((current) => current + 1);
     setReceiptFile(file);
     setDraft(null);
     setParseState(initialParseState);
     setImageStatus("");
+    setMobileEditingItemKey("");
+    setMobileValidationStep(null);
     setReceiptPreviewUrl((current) => {
       if (current) URL.revokeObjectURL(current);
       return file ? URL.createObjectURL(file) : "";
     });
+  }
+
+  function goToMobileStep(step: MobileStep, showValidation = false) {
+    setMobileStep(step);
+    setMobileValidationStep(showValidation ? step : null);
+    setMobileEditingItemKey("");
+    requestAnimationFrame(() => {
+      mobileFlowRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }
+
+  function continueMobileFlow() {
+    if (mobileStepErrors.length > 0) {
+      setMobileValidationStep(mobileStep);
+      requestAnimationFrame(() => {
+        mobileFlowRef.current?.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+      });
+      return;
+    }
+
+    const currentIndex = MOBILE_STEPS.findIndex((step) => step.key === mobileStep);
+    const nextStep = MOBILE_STEPS[currentIndex + 1];
+    if (nextStep) goToMobileStep(nextStep.key);
+  }
+
+  function goBackMobileFlow() {
+    const currentIndex = MOBILE_STEPS.findIndex((step) => step.key === mobileStep);
+    const previousStep = MOBILE_STEPS[currentIndex - 1];
+    if (previousStep) goToMobileStep(previousStep.key);
+  }
+
+  function addAndEditMobileItem() {
+    if (!draft) return;
+
+    const item = createClientReceiptItem(draft.items);
+    setDraft({ ...draft, items: [...draft.items, item] });
+    setMobileEditingItemKey(item.key);
+  }
+
+  function removeMobileItem(key: string) {
+    removeItem(key);
+    setMobileEditingItemKey("");
   }
 
   async function handleReceiptSubmit(event: FormEvent<HTMLFormElement>) {
@@ -385,131 +480,770 @@ export default function ReceiptWizard({
   }
 
   return (
-    <div className="grid gap-6">
-      <section className="rounded-xl border border-[#e5e7eb] bg-white p-4 shadow-sm sm:p-6">
-        <form
-          onSubmit={handleReceiptSubmit}
-          className="grid gap-4 md:grid-cols-[1fr_auto]"
-        >
-          <label className="flex flex-col gap-2">
-            <span className="text-sm font-medium">Receipt image</span>
-            <input
-              name="receiptImage"
-              type="file"
-              accept="image/*"
-              capture="environment"
-              required
-              onChange={(event) => updateReceiptFile(event.target.files?.[0] ?? null)}
-              className="h-10 rounded-md border border-[#e5e7eb] bg-white px-3 py-2 text-sm outline-none focus:border-2 focus:border-[#1d4ed8]"
-            />
-            <span className="text-xs text-zinc-500">
-              Take a photo on mobile or choose an existing image. The photo is only used for OCR.
-            </span>
-          </label>
-
-          <div className="flex items-start md:pt-7">
-            <button
-              type="submit"
-              disabled={isParsing}
-              className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#0a0a0a] px-6 py-[11px] text-sm font-semibold text-white hover:bg-[#222222] disabled:cursor-wait disabled:bg-[#e5e7eb] disabled:text-[#a8aab2] md:w-auto"
-            >
-              {isParsing ? (
-                <>
-                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                  <span>Parsing...</span>
-                </>
-              ) : (
-                "Parse receipt"
-              )}
-            </button>
-          </div>
-        </form>
-
-        {imageStatus ? (
-          <p className="mt-3 text-sm text-zinc-500">{imageStatus}</p>
-        ) : null}
-
-        {receiptPreviewUrl && !draft ? (
-          <div className="mt-4 rounded-lg border border-[#e5e7eb] bg-[#f7f8fa] p-3">
-            <img
-              src={receiptPreviewUrl}
-              alt="Temporary receipt preview"
-              className="max-h-72 w-full rounded-md object-contain"
-            />
-          </div>
-        ) : null}
-
-        {parseState.error ? (
-          <div className="mt-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-            {parseState.error}
-          </div>
-        ) : null}
-      </section>
+    <div className={`grid gap-6 ${draft ? "pb-24 md:pb-0" : ""}`}>
+      <ReceiptUploadSection
+        key={`receipt-upload-${receiptInputVersion}`}
+        className={draft ? "hidden md:block" : ""}
+        draft={draft}
+        imageStatus={imageStatus}
+        isParsing={isParsing}
+        parseError={parseState.error}
+        receiptPreviewUrl={receiptPreviewUrl}
+        onFileChange={updateReceiptFile}
+        onSubmit={handleReceiptSubmit}
+      />
 
       {draft ? (
-        <div className="grid min-w-0 gap-6 lg:grid-cols-[300px_minmax(0,1fr)]">
-          {receiptPreviewUrl ? (
-            <aside className="rounded-xl border border-[#e5e7eb] bg-white p-4 shadow-sm">
-              <img
-                src={receiptPreviewUrl}
-                alt="Temporary receipt preview"
-                className="max-h-[620px] w-full rounded-md object-contain"
+        <>
+          <MobileReceiptSummary
+            draft={draft}
+            receiptFile={receiptFile}
+            receiptPreviewUrl={receiptPreviewUrl}
+            onChangeReceipt={() => updateReceiptFile(null)}
+          />
+
+          <div className="hidden min-w-0 gap-6 md:grid lg:grid-cols-[300px_minmax(0,1fr)]">
+            {receiptPreviewUrl ? (
+              <aside className="rounded-xl border border-[#e5e7eb] bg-white p-4 shadow-sm">
+                <img
+                  src={receiptPreviewUrl}
+                  alt="Temporary receipt preview"
+                  className="max-h-[620px] w-full rounded-md object-contain"
+                />
+                <p className="mt-3 text-xs text-zinc-500">
+                  Temporary preview only. BayarLah saves the parsed items, not this photo.
+                </p>
+              </aside>
+            ) : null}
+
+            <section className="grid min-w-0 gap-6">
+              <ReceiptDetails
+                draft={draft}
+                description={description}
+                onDescriptionChange={setDescription}
+                onDraftFieldChange={updateDraftField}
               />
-              <p className="mt-3 text-xs text-zinc-500">
-                Temporary preview only. BayarLah saves the parsed items, not this photo.
-              </p>
-            </aside>
-          ) : null}
 
-          <section className="grid min-w-0 gap-6">
-            <ReceiptDetails
-              draft={draft}
-              description={description}
-              onDescriptionChange={setDescription}
-              onDraftFieldChange={updateDraftField}
+              <SplitModePicker splitMode={splitMode} onChange={setSplitMode} />
+
+              <ParticipantsSection
+                friends={friends}
+                friendSearch={friendSearch}
+                inlineFriends={inlineFriends}
+                searchableFriends={searchableFriends}
+                selectedFriends={selectedFriends}
+                onAddFriend={addSelectedFriend}
+                onAddInlineFriend={addInlineFriend}
+                onFriendSearchChange={setFriendSearch}
+                onRemoveFriend={removeSelectedFriend}
+                onRemoveInlineFriend={removeInlineFriend}
+                onUpdateInlineFriend={updateInlineFriend}
+              />
+
+              <ParsedItemsSection
+                assignments={assignments}
+                draft={draft}
+                participants={participants}
+                selectedItemKey={selectedItemKey}
+                splitMode={splitMode}
+                onAddItem={addItem}
+                onAssignSelectedItem={assignSelectedItem}
+                onRemoveAssignment={removeAssignment}
+                onRemoveItem={removeItem}
+                onSelectItem={setSelectedItemKey}
+                onUpdateItem={updateItem}
+              />
+
+              <FinalAmountsSection
+                isSaving={isSaving}
+                receiptPayload={receiptPayload}
+                review={review}
+                saveAction={saveAction}
+                saveError={saveState.error}
+                description={description}
+              />
+            </section>
+          </div>
+
+          <div ref={mobileFlowRef} className="grid scroll-mt-4 gap-4 md:hidden">
+            <MobileStepIndicator
+              currentStep={mobileStep}
+              onSelectStep={(step) => goToMobileStep(step)}
             />
 
-            <SplitModePicker splitMode={splitMode} onChange={setSplitMode} />
+            {mobileValidationStep === mobileStep &&
+            mobileStepErrors.length > 0 ? (
+              <MobileValidationAlert errors={mobileStepErrors} />
+            ) : null}
 
-            <ParticipantsSection
-              friends={friends}
-              friendSearch={friendSearch}
-              inlineFriends={inlineFriends}
-              searchableFriends={searchableFriends}
-              selectedFriends={selectedFriends}
-              onAddFriend={addSelectedFriend}
-              onAddInlineFriend={addInlineFriend}
-              onFriendSearchChange={setFriendSearch}
-              onRemoveFriend={removeSelectedFriend}
-              onRemoveInlineFriend={removeInlineFriend}
-              onUpdateInlineFriend={updateInlineFriend}
-            />
+            {mobileStep === "DETAILS" ? (
+              <ReceiptDetails
+                draft={draft}
+                description={description}
+                onDescriptionChange={setDescription}
+                onDraftFieldChange={updateDraftField}
+              />
+            ) : null}
 
-            <ParsedItemsSection
+            {mobileStep === "PEOPLE" ? (
+              <>
+                <SplitModePicker splitMode={splitMode} onChange={setSplitMode} />
+                <ParticipantsSection
+                  friends={friends}
+                  friendSearch={friendSearch}
+                  inlineFriends={inlineFriends}
+                  searchableFriends={searchableFriends}
+                  selectedFriends={selectedFriends}
+                  onAddFriend={addSelectedFriend}
+                  onAddInlineFriend={addInlineFriend}
+                  onFriendSearchChange={setFriendSearch}
+                  onRemoveFriend={removeSelectedFriend}
+                  onRemoveInlineFriend={removeInlineFriend}
+                  onUpdateInlineFriend={updateInlineFriend}
+                />
+              </>
+            ) : null}
+
+            {mobileStep === "ITEMS" ? (
+              <MobileParsedItemsSection
+                assignments={assignments}
+                draft={draft}
+                showNeedsAssignmentOnly={showNeedsAssignmentOnly}
+                splitMode={splitMode}
+                onAddItem={addAndEditMobileItem}
+                onEditItem={setMobileEditingItemKey}
+                onToggleNeedsAssignment={() =>
+                  setShowNeedsAssignmentOnly((current) => !current)
+                }
+              />
+            ) : null}
+
+            <div className={mobileStep === "REVIEW" ? "" : "hidden"}>
+              <FinalAmountsSection
+                description={description}
+                formId="mobile-receipt-save-form"
+                isSaving={isSaving}
+                receiptPayload={receiptPayload}
+                review={review}
+                saveAction={saveAction}
+                saveError={saveState.error}
+                submitPlacement="external"
+                onErrorSelect={(error) =>
+                  goToMobileStep(getMobileErrorStep(error, splitMode), true)
+                }
+              />
+            </div>
+          </div>
+
+          {mobileEditingItemKey ? (
+            <MobileItemEditorSheet
               assignments={assignments}
-              draft={draft}
+              item={
+                draft.items.find((item) => item.key === mobileEditingItemKey) ??
+                null
+              }
+              items={draft.items}
               participants={participants}
-              selectedItemKey={selectedItemKey}
               splitMode={splitMode}
-              onAddItem={addItem}
-              onAssignSelectedItem={assignSelectedItem}
+              onAssignItem={assignItem}
+              onClose={() => setMobileEditingItemKey("")}
+              onEditItem={setMobileEditingItemKey}
               onRemoveAssignment={removeAssignment}
-              onRemoveItem={removeItem}
-              onSelectItem={setSelectedItemKey}
+              onRemoveItem={removeMobileItem}
               onUpdateItem={updateItem}
             />
+          ) : null}
 
-            <FinalAmountsSection
-              isSaving={isSaving}
-              receiptPayload={receiptPayload}
-              review={review}
-              saveAction={saveAction}
-              saveError={saveState.error}
-              description={description}
-            />
-          </section>
+          <MobileStickyNavigation
+            canSave={Boolean(review?.canSave)}
+            currentStep={mobileStep}
+            formId="mobile-receipt-save-form"
+            isSaving={isSaving}
+            onBack={goBackMobileFlow}
+            onContinue={continueMobileFlow}
+          />
+        </>
+      ) : null}
+    </div>
+  );
+}
+
+function ReceiptUploadSection({
+  className = "",
+  draft,
+  imageStatus,
+  isParsing,
+  parseError,
+  receiptPreviewUrl,
+  onFileChange,
+  onSubmit,
+}: {
+  className?: string;
+  draft: ClientReceiptDraft | null;
+  imageStatus: string;
+  isParsing: boolean;
+  parseError?: string;
+  receiptPreviewUrl: string;
+  onFileChange: (file: File | null) => void;
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+}) {
+  return (
+    <section
+      className={`rounded-xl border border-[#e5e7eb] bg-white p-4 shadow-sm sm:p-6 ${className}`}
+    >
+      <form
+        onSubmit={onSubmit}
+        className="grid gap-4 md:grid-cols-[1fr_auto]"
+      >
+        <label className="flex flex-col gap-2">
+          <span className="text-sm font-medium">Receipt image</span>
+          <input
+            name="receiptImage"
+            type="file"
+            accept="image/*"
+            capture="environment"
+            required
+            onChange={(event) => onFileChange(event.target.files?.[0] ?? null)}
+            className="h-10 rounded-md border border-[#e5e7eb] bg-white px-3 py-2 text-sm outline-none focus:border-2 focus:border-[#1d4ed8]"
+          />
+          <span className="text-xs text-zinc-500">
+            Take a photo on mobile or choose an existing image. The photo is only
+            used for OCR.
+          </span>
+        </label>
+
+        <div className="flex items-start md:pt-7">
+          <button
+            type="submit"
+            disabled={isParsing}
+            className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#0a0a0a] px-6 py-[11px] text-sm font-semibold text-white hover:bg-[#222222] disabled:cursor-wait disabled:bg-[#e5e7eb] disabled:text-[#a8aab2] md:w-auto"
+          >
+            {isParsing ? (
+              <>
+                <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                <span>Parsing...</span>
+              </>
+            ) : (
+              "Parse receipt"
+            )}
+          </button>
+        </div>
+      </form>
+
+      {imageStatus ? (
+        <p className="mt-3 text-sm text-zinc-500">{imageStatus}</p>
+      ) : null}
+
+      {receiptPreviewUrl && !draft ? (
+        <div className="mt-4 rounded-lg border border-[#e5e7eb] bg-[#f7f8fa] p-3">
+          <img
+            src={receiptPreviewUrl}
+            alt="Temporary receipt preview"
+            className="max-h-72 w-full rounded-md object-contain"
+          />
         </div>
       ) : null}
+
+      {parseError ? (
+        <div className="mt-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {parseError}
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
+function MobileReceiptSummary({
+  draft,
+  receiptFile,
+  receiptPreviewUrl,
+  onChangeReceipt,
+}: {
+  draft: ClientReceiptDraft;
+  receiptFile: File | null;
+  receiptPreviewUrl: string;
+  onChangeReceipt: () => void;
+}) {
+  return (
+    <section className="flex min-w-0 items-center gap-3 rounded-xl border border-[#e5e7eb] bg-white p-3 shadow-sm md:hidden">
+      {receiptPreviewUrl ? (
+        <img
+          src={receiptPreviewUrl}
+          alt=""
+          className="h-14 w-14 shrink-0 rounded-lg border border-[#e5e7eb] object-cover"
+        />
+      ) : null}
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-semibold">
+          {draft.merchantName || receiptFile?.name || "Parsed receipt"}
+        </p>
+        <p className="text-xs text-zinc-500">
+          {draft.items.length} {draft.items.length === 1 ? "item" : "items"} parsed
+        </p>
+      </div>
+      <button
+        type="button"
+        onClick={onChangeReceipt}
+        className="shrink-0 rounded-full border border-[#0a0a0a] bg-white px-4 py-2 text-xs font-semibold text-[#0a0a0a]"
+      >
+        Change receipt
+      </button>
+    </section>
+  );
+}
+
+function MobileStepIndicator({
+  currentStep,
+  onSelectStep,
+}: {
+  currentStep: MobileStep;
+  onSelectStep: (step: MobileStep) => void;
+}) {
+  return (
+    <nav
+      aria-label="Receipt steps"
+      className="rounded-xl border border-[#e5e7eb] bg-white p-2 shadow-sm"
+    >
+      <ol className="grid grid-cols-4 gap-1">
+        {MOBILE_STEPS.map((step, index) => {
+          const active = step.key === currentStep;
+
+          return (
+            <li key={step.key}>
+              <button
+                type="button"
+                aria-current={active ? "step" : undefined}
+                onClick={() => onSelectStep(step.key)}
+                className={`flex w-full flex-col items-center gap-1 rounded-lg px-1 py-2 text-xs font-medium ${
+                  active
+                    ? "bg-[#0a0a0a] text-white"
+                    : "text-zinc-500 hover:bg-[#f7f8fa] hover:text-zinc-950"
+                }`}
+              >
+                <span
+                  className={`flex h-5 w-5 items-center justify-center rounded-full text-[11px] ${
+                    active ? "bg-white text-[#0a0a0a]" : "bg-[#f2f3f5]"
+                  }`}
+                >
+                  {index + 1}
+                </span>
+                <span>{step.label}</span>
+              </button>
+            </li>
+          );
+        })}
+      </ol>
+    </nav>
+  );
+}
+
+function MobileValidationAlert({ errors }: { errors: string[] }) {
+  return (
+    <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+      <p className="font-medium">Complete this step to continue:</p>
+      <ul className="mt-1 list-inside list-disc">
+        {errors.map((error) => (
+          <li key={error}>{error}</li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function MobileParsedItemsSection({
+  assignments,
+  draft,
+  showNeedsAssignmentOnly,
+  splitMode,
+  onAddItem,
+  onEditItem,
+  onToggleNeedsAssignment,
+}: {
+  assignments: Assignment[];
+  draft: ClientReceiptDraft;
+  showNeedsAssignmentOnly: boolean;
+  splitMode: SplitMode;
+  onAddItem: () => void;
+  onEditItem: (itemKey: string) => void;
+  onToggleNeedsAssignment: () => void;
+}) {
+  const totalUnits = draft.items.reduce(
+    (sum, item) => sum + (parseQuantity(item.quantity) ?? 0),
+    0
+  );
+  const assignedUnits = assignments.filter((assignment) =>
+    draft.items.some((item) => item.key === assignment.itemKey)
+  ).length;
+  const visibleItems =
+    splitMode === "CUSTOM_AMOUNT" && showNeedsAssignmentOnly
+      ? draft.items.filter(
+          (item) => getRemainingQuantity(item, assignments) > 0
+        )
+      : draft.items;
+
+  return (
+    <section className="rounded-xl border border-[#e5e7eb] bg-white p-4 shadow-sm">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h2 className="text-xl font-semibold">Parsed items</h2>
+          <p className="mt-1 text-sm text-zinc-500">
+            Tap an item to edit it
+            {splitMode === "CUSTOM_AMOUNT" ? " or assign its units" : ""}.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={onAddItem}
+          className="shrink-0 rounded-full border border-[#0a0a0a] bg-white px-4 py-2 text-xs font-semibold text-[#0a0a0a]"
+        >
+          + Add
+        </button>
+      </div>
+
+      {splitMode === "CUSTOM_AMOUNT" ? (
+        <div className="mt-4 rounded-lg bg-[#f7f8fa] p-3">
+          <div className="flex items-center justify-between gap-3 text-sm">
+            <span className="font-medium">Assignment progress</span>
+            <span className="text-zinc-600">
+              {Math.min(assignedUnits, totalUnits)} of {totalUnits} units
+            </span>
+          </div>
+          <div className="mt-2 h-2 overflow-hidden rounded-full bg-[#e5e7eb]">
+            <div
+              className="h-full rounded-full bg-[#1d4ed8]"
+              style={{
+                width: `${
+                  totalUnits > 0
+                    ? Math.min(100, (assignedUnits / totalUnits) * 100)
+                    : 0
+                }%`,
+              }}
+            />
+          </div>
+          <button
+            type="button"
+            aria-pressed={showNeedsAssignmentOnly}
+            onClick={onToggleNeedsAssignment}
+            className={`mt-3 rounded-full border px-3 py-1.5 text-xs font-semibold ${
+              showNeedsAssignmentOnly
+                ? "border-[#1d4ed8] bg-white text-[#1d4ed8]"
+                : "border-[#e5e7eb] bg-white text-zinc-600"
+            }`}
+          >
+            Needs assignment
+          </button>
+        </div>
+      ) : (
+        <p className="mt-4 rounded-lg bg-[#f7f8fa] px-3 py-2 text-sm text-zinc-600">
+          Equal split uses the receipt total. Items are kept for receipt history.
+        </p>
+      )}
+
+      <div className="mt-4 grid gap-2">
+        {visibleItems.map((item) => {
+          const quantity = parseQuantity(item.quantity) ?? 0;
+          const assigned = assignments.filter(
+            (assignment) => assignment.itemKey === item.key
+          ).length;
+
+          return (
+            <button
+              key={item.key}
+              type="button"
+              onClick={() => onEditItem(item.key)}
+              className="grid w-full grid-cols-[minmax(0,1fr)_auto] gap-3 rounded-lg border border-[#e5e7eb] bg-[#f7f8fa] px-3 py-3 text-left hover:bg-white"
+            >
+              <span className="min-w-0">
+                <span className="block truncate font-medium">
+                  {item.name || "Unnamed item"}
+                </span>
+                <span className="mt-1 block text-xs text-zinc-500">
+                  Qty {item.quantity || "0"} -{" "}
+                  {formatMoney((parseMoneyToCents(item.unitAmount) ?? 0) / 100)}{" "}
+                  each
+                </span>
+                {splitMode === "CUSTOM_AMOUNT" ? (
+                  <span
+                    className={`mt-1 block text-xs font-medium ${
+                      assigned >= quantity && quantity > 0
+                        ? "text-emerald-700"
+                        : "text-amber-700"
+                    }`}
+                  >
+                    {assigned} of {quantity} assigned
+                  </span>
+                ) : null}
+              </span>
+              <span className="self-center text-sm font-medium text-[#1d4ed8]">
+                Edit
+              </span>
+            </button>
+          );
+        })}
+
+        {visibleItems.length === 0 ? (
+          <p className="rounded-lg border border-dashed border-[#e5e7eb] px-3 py-6 text-center text-sm text-zinc-500">
+            All item units are assigned.
+          </p>
+        ) : null}
+      </div>
+    </section>
+  );
+}
+
+function MobileItemEditorSheet({
+  assignments,
+  item,
+  items,
+  participants,
+  splitMode,
+  onAssignItem,
+  onClose,
+  onEditItem,
+  onRemoveAssignment,
+  onRemoveItem,
+  onUpdateItem,
+}: {
+  assignments: Assignment[];
+  item: ClientReceiptItem | null;
+  items: ClientReceiptItem[];
+  participants: Participant[];
+  splitMode: SplitMode;
+  onAssignItem: (itemKey: string, participantKey: string) => void;
+  onClose: () => void;
+  onEditItem: (itemKey: string) => void;
+  onRemoveAssignment: (assignmentId: string) => void;
+  onRemoveItem: (itemKey: string) => void;
+  onUpdateItem: (
+    key: string,
+    field: keyof Omit<ClientReceiptItem, "key">,
+    value: string
+  ) => void;
+}) {
+  if (!item) return null;
+
+  const quantity = parseQuantity(item.quantity) ?? 0;
+  const itemAssignments = assignments.filter(
+    (assignment) => assignment.itemKey === item.key
+  );
+  const remaining = getRemainingQuantity(item, assignments);
+  const nextItem = getNextUnassignedItem(items, item.key, assignments);
+
+  return (
+    <div className="fixed inset-0 z-40 md:hidden">
+      <button
+        type="button"
+        aria-label="Close item editor"
+        onClick={onClose}
+        className="absolute inset-0 bg-black/40"
+      />
+      <section
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="mobile-item-editor-title"
+        className="absolute inset-x-0 bottom-0 max-h-[90dvh] overflow-y-auto rounded-t-3xl bg-white p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-2xl"
+      >
+        <div className="mx-auto mb-4 h-1.5 w-12 rounded-full bg-zinc-300" />
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h2 id="mobile-item-editor-title" className="text-xl font-semibold">
+              Edit item
+            </h2>
+            <p className="mt-1 text-sm text-zinc-500">
+              {splitMode === "CUSTOM_AMOUNT"
+                ? `${itemAssignments.length} of ${quantity} units assigned`
+                : "Update the parsed receipt item."}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-full border border-[#e5e7eb] px-4 py-2 text-sm font-semibold"
+          >
+            Done
+          </button>
+        </div>
+
+        <div className="mt-5 grid gap-4">
+          <label className="flex flex-col gap-2">
+            <span className="text-sm font-medium">Item</span>
+            <input
+              value={item.name}
+              onChange={(event) =>
+                onUpdateItem(item.key, "name", event.target.value)
+              }
+              placeholder="Chicken rice"
+              className="h-11 rounded-md border border-[#e5e7eb] bg-white px-4 outline-none placeholder:text-[#8e8e93] focus:border-2 focus:border-[#1d4ed8]"
+            />
+          </label>
+
+          <div className="grid grid-cols-2 gap-3">
+            <label className="flex flex-col gap-2">
+              <span className="text-sm font-medium">Qty</span>
+              <input
+                type="number"
+                min="1"
+                step="1"
+                value={item.quantity}
+                onChange={(event) =>
+                  onUpdateItem(item.key, "quantity", event.target.value)
+                }
+                className="h-11 rounded-md border border-[#e5e7eb] bg-white px-4 outline-none focus:border-2 focus:border-[#1d4ed8]"
+              />
+            </label>
+            <MoneyInput
+              label="Unit price"
+              value={item.unitAmount}
+              placeholder="12.50"
+              onChange={(value) => onUpdateItem(item.key, "unitAmount", value)}
+            />
+          </div>
+        </div>
+
+        {splitMode === "CUSTOM_AMOUNT" ? (
+          <div className="mt-6 border-t border-[#e5e7eb] pt-5">
+            <div className="flex items-center justify-between gap-3">
+              <h3 className="font-semibold">Assign units</h3>
+              <span
+                className={`text-sm font-medium ${
+                  remaining > 0 ? "text-amber-700" : "text-emerald-700"
+                }`}
+              >
+                {remaining} remaining
+              </span>
+            </div>
+
+            <div className="mt-3 grid gap-2">
+              {participants.map((participant) => {
+                const participantAssignments = itemAssignments.filter(
+                  (assignment) =>
+                    assignment.participantKey === participant.key
+                );
+                const lastAssignment =
+                  participantAssignments[participantAssignments.length - 1];
+
+                return (
+                  <div
+                    key={participant.key}
+                    className="flex items-center justify-between gap-3 rounded-lg border border-[#e5e7eb] bg-[#f7f8fa] px-3 py-3"
+                  >
+                    <span className="min-w-0">
+                      <span className="block truncate font-medium">
+                        {participant.name}
+                      </span>
+                      <span className="block text-xs text-zinc-500">
+                        {participantAssignments.length} assigned
+                      </span>
+                    </span>
+                    <span className="flex shrink-0 items-center gap-2">
+                      {lastAssignment ? (
+                        <button
+                          type="button"
+                          aria-label={`Remove one ${item.name || "item"} unit from ${participant.name}`}
+                          onClick={() =>
+                            onRemoveAssignment(lastAssignment.id)
+                          }
+                          className="h-9 w-9 rounded-full border border-[#e5e7eb] bg-white text-lg font-medium"
+                        >
+                          -
+                        </button>
+                      ) : null}
+                      <button
+                        type="button"
+                        aria-label={`Assign one ${item.name || "item"} unit to ${participant.name}`}
+                        disabled={remaining <= 0}
+                        onClick={() => onAssignItem(item.key, participant.key)}
+                        className="h-9 w-9 rounded-full bg-[#0a0a0a] text-lg font-medium text-white disabled:bg-[#e5e7eb] disabled:text-[#a8aab2]"
+                      >
+                        +
+                      </button>
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+
+            <button
+              type="button"
+              disabled={!nextItem}
+              onClick={() => {
+                if (nextItem) onEditItem(nextItem.key);
+              }}
+              className="mt-4 w-full rounded-full border border-[#0a0a0a] bg-white px-5 py-[11px] text-sm font-semibold disabled:border-[#e5e7eb] disabled:text-[#a8aab2]"
+            >
+              {nextItem ? "Next unassigned item" : "All items assigned"}
+            </button>
+          </div>
+        ) : null}
+
+        <button
+          type="button"
+          disabled={items.length === 1}
+          onClick={() => onRemoveItem(item.key)}
+          className="mt-5 w-full rounded-full border border-red-200 bg-white px-5 py-[11px] text-sm font-semibold text-red-700 disabled:border-[#e5e7eb] disabled:text-[#a8aab2]"
+        >
+          Remove item
+        </button>
+      </section>
+    </div>
+  );
+}
+
+function MobileStickyNavigation({
+  canSave,
+  currentStep,
+  formId,
+  isSaving,
+  onBack,
+  onContinue,
+}: {
+  canSave: boolean;
+  currentStep: MobileStep;
+  formId: string;
+  isSaving: boolean;
+  onBack: () => void;
+  onContinue: () => void;
+}) {
+  const isFirstStep = currentStep === MOBILE_STEPS[0].key;
+  const isReview = currentStep === "REVIEW";
+
+  return (
+    <div className="fixed inset-x-0 bottom-0 z-30 border-t border-[#e5e7eb] bg-white/95 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur md:hidden">
+      <div className="mx-auto flex max-w-5xl gap-3">
+        <button
+          type="button"
+          disabled={isFirstStep}
+          onClick={onBack}
+          className="rounded-full border border-[#0a0a0a] bg-white px-5 py-[11px] text-sm font-semibold disabled:border-[#e5e7eb] disabled:text-[#a8aab2]"
+        >
+          Back
+        </button>
+        {isReview ? (
+          <button
+            type="submit"
+            form={formId}
+            disabled={!canSave || isSaving}
+            className="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-[#0a0a0a] px-6 py-[11px] text-sm font-semibold text-white disabled:bg-[#e5e7eb] disabled:text-[#a8aab2]"
+          >
+            {isSaving ? (
+              <>
+                <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                <span>Saving...</span>
+              </>
+            ) : (
+              "Save receipt expense"
+            )}
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={onContinue}
+            className="flex-1 rounded-full bg-[#0a0a0a] px-6 py-[11px] text-sm font-semibold text-white"
+          >
+            Continue
+          </button>
+        )}
+      </div>
     </div>
   );
 }
@@ -1041,19 +1775,25 @@ function CustomItemMatcher({
 }
 
 function FinalAmountsSection({
+  description,
+  formId,
   isSaving,
+  onErrorSelect,
   receiptPayload,
   review,
   saveAction,
   saveError,
-  description,
+  submitPlacement = "inline",
 }: {
+  description: string;
+  formId?: string;
   isSaving: boolean;
+  onErrorSelect?: (error: string) => void;
   receiptPayload: string;
   review: ReturnType<typeof buildReview> | null;
   saveAction: (payload: FormData) => void;
   saveError?: string;
-  description: string;
+  submitPlacement?: "inline" | "external";
 }) {
   return (
     <div className="rounded-xl border border-[#e5e7eb] bg-white p-4 shadow-sm sm:p-6">
@@ -1085,11 +1825,30 @@ function FinalAmountsSection({
 
       {review && review.errors.length > 0 ? (
         <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-          <ul className="list-inside list-disc">
-            {review.errors.map((error) => (
-              <li key={error}>{error}</li>
-            ))}
-          </ul>
+          {onErrorSelect ? (
+            <>
+              <p className="font-medium">Review these issues before saving:</p>
+              <ul className="mt-2 grid gap-1">
+                {review.errors.map((error) => (
+                  <li key={error}>
+                    <button
+                      type="button"
+                      onClick={() => onErrorSelect(error)}
+                      className="text-left underline decoration-amber-400 underline-offset-2"
+                    >
+                      {error}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </>
+          ) : (
+            <ul className="list-inside list-disc">
+              {review.errors.map((error) => (
+                <li key={error}>{error}</li>
+              ))}
+            </ul>
+          )}
         </div>
       ) : null}
 
@@ -1099,26 +1858,28 @@ function FinalAmountsSection({
         </div>
       ) : null}
 
-      <form action={saveAction} className="mt-5 grid gap-5">
+      <form id={formId} action={saveAction} className="mt-5 grid gap-5">
         <input type="hidden" name="description" value={description} />
         <input type="hidden" name="receiptPayload" value={receiptPayload} />
         <ReminderFrequencyPicker />
-        <div className="flex justify-stretch sm:justify-end">
-          <button
-            type="submit"
-            disabled={!review?.canSave || isSaving}
-            className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#0a0a0a] px-6 py-[11px] text-sm font-semibold text-white hover:bg-[#222222] disabled:cursor-not-allowed disabled:bg-[#e5e7eb] disabled:text-[#a8aab2] sm:w-auto"
-          >
-            {isSaving ? (
-              <>
-                <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                <span>Saving...</span>
-              </>
-            ) : (
-              "Save receipt expense"
-            )}
-          </button>
-        </div>
+        {submitPlacement === "inline" ? (
+          <div className="flex justify-stretch sm:justify-end">
+            <button
+              type="submit"
+              disabled={!review?.canSave || isSaving}
+              className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#0a0a0a] px-6 py-[11px] text-sm font-semibold text-white hover:bg-[#222222] disabled:cursor-not-allowed disabled:bg-[#e5e7eb] disabled:text-[#a8aab2] sm:w-auto"
+            >
+              {isSaving ? (
+                <>
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                  <span>Saving...</span>
+                </>
+              ) : (
+                "Save receipt expense"
+              )}
+            </button>
+          </div>
+        ) : null}
       </form>
     </div>
   );
@@ -1363,6 +2124,52 @@ function getRemainingQuantity(item: ClientReceiptItem, assignments: Assignment[]
   return Math.max(0, quantity - assignedCount);
 }
 
+function getNextUnassignedItem(
+  items: ClientReceiptItem[],
+  currentItemKey: string,
+  assignments: Assignment[]
+) {
+  const currentIndex = items.findIndex((item) => item.key === currentItemKey);
+  if (currentIndex < 0) return null;
+
+  for (let offset = 1; offset < items.length; offset += 1) {
+    const item = items[(currentIndex + offset) % items.length];
+    if (getRemainingQuantity(item, assignments) > 0) return item;
+  }
+
+  return null;
+}
+
+function getMobileErrorStep(
+  error: string,
+  splitMode: SplitMode
+): MobileStep {
+  if (
+    error === "Add a description." ||
+    error === "Receipt subtotal and total must be above RM0.00." ||
+    error === "Tax and service charge cannot be negative." ||
+    error === "Subtotal, tax, service, and rounding must match total."
+  ) {
+    return "DETAILS";
+  }
+
+  if (
+    error === "Complete each inline friend." ||
+    error === "Add at least one friend."
+  ) {
+    return "PEOPLE";
+  }
+
+  if (
+    error === "Assign at least one amount to a friend." &&
+    splitMode === "EQUAL_SPLIT"
+  ) {
+    return "PEOPLE";
+  }
+
+  return "ITEMS";
+}
+
 function trimAssignmentsForItem(
   assignments: Assignment[],
   itemKey: string,
@@ -1401,6 +2208,15 @@ function getNextItemNumber(items: ClientReceiptItem[]) {
   }, 0);
 
   return highest + 1;
+}
+
+function createClientReceiptItem(items: ClientReceiptItem[]): ClientReceiptItem {
+  return {
+    key: `item-${getNextItemNumber(items)}`,
+    name: "",
+    quantity: "1",
+    unitAmount: "",
+  };
 }
 
 function parseQuantity(value: string) {
