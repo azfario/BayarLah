@@ -7,11 +7,13 @@ import { currentUser } from "@clerk/nextjs/server";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
-import { isDuitNowIdType } from "@/lib/duitnow";
-import { normalizeMalaysianPhone } from "@/lib/friends";
+import { isDuitNowIdType, normalizeMalaysianNric } from "@/lib/duitnow";
+import {
+  isValidMalaysianMobilePhone,
+  normalizeMalaysianMobilePhone,
+} from "@/lib/friends";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
-const PROFILE_PHOTOS_BUCKET = "profile-photos";
 const DUITNOW_QRS_BUCKET = "duitnow-qrs";
 const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024;
 
@@ -21,11 +23,11 @@ export async function saveProfile(formData: FormData) {
 
   const redirectTo = getSafeRedirect(formData.get("redirectTo"));
   const fullName = getString(formData.get("fullName"));
-  const phone = normalizeMalaysianPhone(getString(formData.get("phone")));
+  const rawPhone = getString(formData.get("phone"));
+  const phone = normalizeMalaysianMobilePhone(rawPhone);
   const duitNowIdType = getString(formData.get("duitNowIdType"));
-  const duitNowIdValue = getString(formData.get("duitNowIdValue"));
+  const rawDuitNowIdValue = getString(formData.get("duitNowIdValue"));
   const duitNowRecipientName = getString(formData.get("duitNowRecipientName"));
-  const profilePhoto = getUploadedFile(formData.get("profilePhoto"));
   const duitNowQr = getUploadedFile(formData.get("duitNowQr"));
   const email = clerkUser.emailAddresses[0]?.emailAddress ?? "";
 
@@ -33,28 +35,50 @@ export async function saveProfile(formData: FormData) {
     where: { clerkId: clerkUser.id },
   });
 
-  if (
-    !fullName ||
-    !phone ||
-    !duitNowIdValue ||
-    !duitNowRecipientName ||
-    !isDuitNowIdType(duitNowIdType)
-  ) {
-    redirectToProfile("Please complete all required profile fields.", redirectTo);
+  if (!fullName) {
+    redirectToProfile("Please enter your display name.", redirectTo);
+  }
+
+  if (!isValidMalaysianMobilePhone(phone)) {
+    redirectToProfile(
+      "Please enter a valid Malaysian mobile number, for example +60123456789.",
+      redirectTo
+    );
+  }
+
+  if (!isDuitNowIdType(duitNowIdType)) {
+    redirectToProfile("Please select a DuitNow ID type.", redirectTo);
+  }
+
+  let duitNowIdValue = rawDuitNowIdValue;
+  if (duitNowIdType === "PHONE") {
+    duitNowIdValue = normalizeMalaysianMobilePhone(rawDuitNowIdValue);
+    if (!isValidMalaysianMobilePhone(duitNowIdValue)) {
+      redirectToProfile(
+        "Please enter a valid DuitNow mobile number, for example +60123456789.",
+        redirectTo
+      );
+    }
+  } else if (duitNowIdType === "NRIC") {
+    duitNowIdValue = normalizeMalaysianNric(rawDuitNowIdValue);
+    if (!duitNowIdValue) {
+      redirectToProfile(
+        "Please enter a valid 12-digit NRIC, for example 900101145678.",
+        redirectTo
+      );
+    }
+  } else if (!duitNowIdValue) {
+    redirectToProfile("Please enter your DuitNow ID.", redirectTo);
+  }
+
+  if (!duitNowRecipientName) {
+    redirectToProfile("Please enter your DuitNow recipient name.", redirectTo);
   }
 
   if (!duitNowQr && !existingUser?.duitNowQrUrl) {
     redirectToProfile("Please upload your DuitNow QR image.", redirectTo);
   }
 
-  const profilePhotoUrl = profilePhoto
-    ? await uploadImage(
-        profilePhoto,
-        PROFILE_PHOTOS_BUCKET,
-        clerkUser.id,
-        redirectTo
-      )
-    : existingUser?.profilePhotoUrl ?? null;
   const duitNowQrUrl = duitNowQr
     ? await uploadImage(
         duitNowQr,
@@ -70,7 +94,6 @@ export async function saveProfile(formData: FormData) {
       email,
       fullName,
       phone,
-      profilePhotoUrl,
       duitNowIdType: duitNowIdType as DuitNowIdType,
       duitNowIdValue,
       duitNowRecipientName,
@@ -81,7 +104,6 @@ export async function saveProfile(formData: FormData) {
       email,
       fullName,
       phone,
-      profilePhotoUrl,
       duitNowIdType: duitNowIdType as DuitNowIdType,
       duitNowIdValue,
       duitNowRecipientName,

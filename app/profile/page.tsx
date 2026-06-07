@@ -3,11 +3,11 @@ import { currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { saveProfile } from "@/lib/actions/profile";
 import { ensureUserInDB } from "@/lib/actions/user";
-import { DUITNOW_ID_TYPES } from "@/lib/duitnow";
 import { isProfileComplete } from "@/lib/profile";
 import StatusToast from "@/components/StatusToast";
 import SubmitButton from "@/components/SubmitButton";
 import BrandLogo from "@/components/BrandLogo";
+import DuitNowIdFields from "./DuitNowIdFields";
 
 export const dynamic = "force-dynamic";
 
@@ -51,7 +51,7 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
 
           <div className="grid gap-5 md:grid-cols-2">
             <label className="flex flex-col gap-2">
-              <span className="text-sm font-medium">Full name</span>
+              <span className="text-sm font-medium">Display name</span>
               <input
                 name="fullName"
                 defaultValue={user.fullName ?? ""}
@@ -68,58 +68,18 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
                 defaultValue={user.phone ?? ""}
                 required
                 placeholder="+60123456789"
+                inputMode="tel"
                 className="h-10 rounded-md border border-[#e5e7eb] bg-white px-4 outline-none placeholder:text-[#8e8e93] focus:border-2 focus:border-[#1d4ed8]"
               />
+              <span className="text-sm text-zinc-500">
+                Used for WhatsApp payment notifications.
+              </span>
             </label>
 
-            <label className="flex flex-col gap-2">
-              <span className="text-sm font-medium">Email</span>
-              <input
-                value={user.email}
-                readOnly
-                className="h-10 rounded-md border border-[#e5e7eb] bg-[#f2f3f5] px-4 text-zinc-600"
-              />
-            </label>
-
-            <label className="flex flex-col gap-2">
-              <span className="text-sm font-medium">Profile photo</span>
-              <input
-                name="profilePhoto"
-                type="file"
-                accept="image/*"
-                className="h-10 rounded-md border border-[#e5e7eb] bg-white px-3 py-2 text-sm"
-              />
-            </label>
-
-            <label className="flex flex-col gap-2">
-              <span className="text-sm font-medium">DuitNow ID type</span>
-              <select
-                name="duitNowIdType"
-                defaultValue={user.duitNowIdType ?? ""}
-                required
-                className="h-10 rounded-md border border-[#e5e7eb] bg-white px-4 outline-none focus:border-2 focus:border-[#1d4ed8]"
-              >
-                <option value="" disabled>
-                  Select type
-                </option>
-                {DUITNOW_ID_TYPES.map((type) => (
-                  <option key={type.value} value={type.value}>
-                    {type.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label className="flex flex-col gap-2">
-              <span className="text-sm font-medium">DuitNow ID value</span>
-              <input
-                name="duitNowIdValue"
-                defaultValue={user.duitNowIdValue ?? ""}
-                required
-                placeholder="0123456789"
-                className="h-10 rounded-md border border-[#e5e7eb] bg-white px-4 outline-none placeholder:text-[#8e8e93] focus:border-2 focus:border-[#1d4ed8]"
-              />
-            </label>
+            <DuitNowIdFields
+              defaultType={user.duitNowIdType}
+              defaultValue={user.duitNowIdValue}
+            />
 
             <label className="flex flex-col gap-2">
               <span className="text-sm font-medium">DuitNow recipient name</span>
@@ -130,6 +90,10 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
                 placeholder="Name shown on bank receipts"
                 className="h-10 rounded-md border border-[#e5e7eb] bg-white px-4 outline-none placeholder:text-[#8e8e93] focus:border-2 focus:border-[#1d4ed8]"
               />
+              <span className="text-sm text-zinc-500">
+                Exact name shown by your bank after someone scans your DuitNow
+                QR. Used to verify payment receipts.
+              </span>
             </label>
           </div>
 
@@ -150,20 +114,7 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
               </p>
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-2">
-              {user.profilePhotoUrl ? (
-                <div className="flex flex-col gap-2">
-                  <span className="text-sm font-medium">Current photo</span>
-                  {/* User-upload hosts vary by environment, so render the stored URL directly. */}
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={user.profilePhotoUrl}
-                    alt="Current profile"
-                    className="aspect-square rounded-md border border-zinc-200 object-cover"
-                  />
-                </div>
-              ) : null}
-
+            <div>
               {user.duitNowQrUrl ? (
                 <div className="flex flex-col gap-2">
                   <span className="text-sm font-medium">Current QR</span>
