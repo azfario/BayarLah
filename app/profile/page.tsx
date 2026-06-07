@@ -45,7 +45,7 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
 
         <form
           action={saveProfile}
-          className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm sm:p-6"
+          className="rounded-xl border border-[#e5e7eb] bg-white p-4 shadow-sm sm:p-6"
         >
           <input type="hidden" name="redirectTo" value={next} />
 
@@ -56,7 +56,8 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
                 name="fullName"
                 defaultValue={user.fullName ?? ""}
                 required
-                className="rounded-md border border-zinc-300 px-3 py-2 outline-none focus:border-emerald-600"
+                placeholder="Nur Aisyah Ahmad"
+                className="h-10 rounded-md border border-[#e5e7eb] bg-white px-4 outline-none placeholder:text-[#8e8e93] focus:border-2 focus:border-[#1d4ed8]"
               />
             </label>
 
@@ -67,7 +68,7 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
                 defaultValue={user.phone ?? ""}
                 required
                 placeholder="+60123456789"
-                className="rounded-md border border-zinc-300 px-3 py-2 outline-none focus:border-emerald-600"
+                className="h-10 rounded-md border border-[#e5e7eb] bg-white px-4 outline-none placeholder:text-[#8e8e93] focus:border-2 focus:border-[#1d4ed8]"
               />
             </label>
 
@@ -76,7 +77,7 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
               <input
                 value={user.email}
                 readOnly
-                className="rounded-md border border-zinc-200 bg-zinc-100 px-3 py-2 text-zinc-600"
+                className="h-10 rounded-md border border-[#e5e7eb] bg-[#f2f3f5] px-4 text-zinc-600"
               />
             </label>
 
@@ -86,7 +87,7 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
                 name="profilePhoto"
                 type="file"
                 accept="image/*"
-                className="rounded-md border border-zinc-300 px-3 py-2 text-sm"
+                className="h-10 rounded-md border border-[#e5e7eb] bg-white px-3 py-2 text-sm"
               />
             </label>
 
@@ -96,7 +97,7 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
                 name="duitNowIdType"
                 defaultValue={user.duitNowIdType ?? ""}
                 required
-                className="rounded-md border border-zinc-300 px-3 py-2 outline-none focus:border-emerald-600"
+                className="h-10 rounded-md border border-[#e5e7eb] bg-white px-4 outline-none focus:border-2 focus:border-[#1d4ed8]"
               >
                 <option value="" disabled>
                   Select type
@@ -115,7 +116,8 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
                 name="duitNowIdValue"
                 defaultValue={user.duitNowIdValue ?? ""}
                 required
-                className="rounded-md border border-zinc-300 px-3 py-2 outline-none focus:border-emerald-600"
+                placeholder="0123456789"
+                className="h-10 rounded-md border border-[#e5e7eb] bg-white px-4 outline-none placeholder:text-[#8e8e93] focus:border-2 focus:border-[#1d4ed8]"
               />
             </label>
 
@@ -126,7 +128,7 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
                 defaultValue={user.duitNowRecipientName ?? ""}
                 required
                 placeholder="Name shown on bank receipts"
-                className="rounded-md border border-zinc-300 px-3 py-2 outline-none focus:border-emerald-600"
+                className="h-10 rounded-md border border-[#e5e7eb] bg-white px-4 outline-none placeholder:text-[#8e8e93] focus:border-2 focus:border-[#1d4ed8]"
               />
             </label>
           </div>
@@ -140,7 +142,7 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
                   type="file"
                   accept="image/*"
                   required={!user.duitNowQrUrl}
-                  className="rounded-md border border-zinc-300 px-3 py-2 text-sm"
+                  className="h-10 rounded-md border border-[#e5e7eb] bg-white px-3 py-2 text-sm"
                 />
               </label>
               <p className="text-sm text-zinc-500">

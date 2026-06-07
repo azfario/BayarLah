@@ -20,14 +20,14 @@ export default function SubmitButton({
     variant === "danger"
       ? "border border-red-200 bg-white text-red-700 hover:bg-red-50 disabled:bg-red-50"
       : variant === "secondary"
-        ? "border border-zinc-300 bg-white text-zinc-700 hover:bg-zinc-50 disabled:bg-zinc-100"
-        : "bg-emerald-700 text-white hover:bg-emerald-800 disabled:bg-emerald-600";
+        ? "border border-[#0a0a0a] bg-white text-[#0a0a0a] hover:bg-[#f7f8fa] disabled:border-[#e5e7eb] disabled:bg-[#e5e7eb] disabled:text-[#a8aab2]"
+        : "bg-[#0a0a0a] text-white hover:bg-[#222222] disabled:bg-[#e5e7eb] disabled:text-[#a8aab2]";
 
   return (
     <button
       type="submit"
       disabled={pending}
-      className={`inline-flex items-center justify-center gap-2 rounded-md px-5 py-2 font-medium disabled:cursor-wait ${variantClass} ${className}`}
+      className={`inline-flex items-center justify-center gap-2 rounded-full px-6 py-[11px] text-sm font-semibold disabled:cursor-wait ${variantClass} ${className}`}
     >
       {pending ? (
         <>

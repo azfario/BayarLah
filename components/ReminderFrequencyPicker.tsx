@@ -31,7 +31,7 @@ export default function ReminderFrequencyPicker({
 
   return (
     <fieldset
-      className={`rounded-md border border-zinc-200 bg-zinc-50 p-4 ${className}`}
+      className={`rounded-lg border border-[#e5e7eb] bg-[#f7f8fa] p-4 ${className}`}
     >
       <legend className="px-1 text-sm font-medium">Reminder frequency</legend>
       <input type="hidden" name="reminderFrequencyValue" value={value} />
@@ -49,7 +49,7 @@ export default function ReminderFrequencyPicker({
                   onClick={() => setValue(option)}
                   className={`flex h-10 w-full snap-center items-center justify-center text-lg font-semibold transition ${
                     value === option
-                      ? "bg-white text-emerald-700 shadow-sm"
+                      ? "bg-white text-[#0a0a0a] shadow-sm"
                       : "text-zinc-500 hover:bg-white hover:text-zinc-950"
                   }`}
                 >
@@ -67,7 +67,7 @@ export default function ReminderFrequencyPicker({
                   onClick={() => updateUnit(option)}
                   className={`flex h-12 w-full snap-center items-center justify-center text-sm font-semibold transition ${
                     unit === option
-                      ? "bg-white text-emerald-700 shadow-sm"
+                      ? "bg-white text-[#0a0a0a] shadow-sm"
                       : "text-zinc-500 hover:bg-white hover:text-zinc-950"
                   }`}
                 >
@@ -78,11 +78,11 @@ export default function ReminderFrequencyPicker({
           </div>
         </div>
 
-        <div className="flex flex-col justify-center rounded-md border border-emerald-100 bg-white px-4 py-3">
+        <div className="flex flex-col justify-center rounded-lg border border-[#e5e7eb] bg-white px-4 py-3">
           <span className="text-xs font-medium uppercase text-zinc-500">
             Every
           </span>
-          <span className="mt-1 text-2xl font-bold text-emerald-700">
+          <span className="mt-1 text-2xl font-bold text-[#1d4ed8]">
             {value} {unit === "HOURS" ? unitLabel(value, "hour") : unitLabel(value, "day")}
           </span>
           <span className="mt-2 text-xs text-zinc-500">

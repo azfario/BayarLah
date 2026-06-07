@@ -55,7 +55,7 @@ export default async function FriendsPage({ searchParams }: FriendsPageProps) {
 
         <StatusToast error={params.error} success={params.success} />
 
-        <section className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm sm:p-6">
+        <section className="rounded-xl border border-[#e5e7eb] bg-white p-4 shadow-sm sm:p-6">
           <h2 className="text-xl font-semibold">Add friend</h2>
           <form action={createFriend} className="mt-4 grid gap-4 md:grid-cols-[1fr_1fr_auto]">
             <label className="flex flex-col gap-2">
@@ -63,7 +63,8 @@ export default async function FriendsPage({ searchParams }: FriendsPageProps) {
               <input
                 name="name"
                 required
-                className="rounded-md border border-zinc-300 px-3 py-2 outline-none focus:border-emerald-600"
+                placeholder="Nur Aisyah"
+                className="h-10 rounded-md border border-[#e5e7eb] bg-white px-4 outline-none placeholder:text-[#8e8e93] focus:border-2 focus:border-[#1d4ed8]"
               />
             </label>
 
@@ -73,7 +74,7 @@ export default async function FriendsPage({ searchParams }: FriendsPageProps) {
                 name="phone"
                 required
                 placeholder="0123456789"
-                className="rounded-md border border-zinc-300 px-3 py-2 outline-none focus:border-emerald-600"
+                className="h-10 rounded-md border border-[#e5e7eb] bg-white px-4 outline-none placeholder:text-[#8e8e93] focus:border-2 focus:border-[#1d4ed8]"
               />
             </label>
 
@@ -85,7 +86,7 @@ export default async function FriendsPage({ searchParams }: FriendsPageProps) {
           </form>
         </section>
 
-        <section className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm sm:p-6">
+        <section className="rounded-xl border border-[#e5e7eb] bg-white p-4 shadow-sm sm:p-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h2 className="text-xl font-semibold">Saved friends</h2>
             <span className="text-sm text-zinc-500">{friends.length} total</span>

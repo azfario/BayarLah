@@ -25,14 +25,14 @@ export default function ExpenseCreateTabs({
 
   return (
     <section className="grid gap-4">
-      <div className="grid grid-cols-2 gap-2 rounded-lg border border-zinc-200 bg-white p-1 shadow-sm">
+      <div className="grid grid-cols-2 gap-2 rounded-full border border-[#e5e7eb] bg-white p-1 shadow-sm">
         <button
           type="button"
           onClick={() => setMode("manual")}
-          className={`rounded-md px-4 py-2 text-sm font-medium ${
+          className={`rounded-full px-4 py-2 text-sm font-medium ${
             mode === "manual"
-              ? "bg-emerald-700 text-white"
-              : "text-zinc-600 hover:bg-zinc-50 hover:text-zinc-950"
+              ? "bg-[#0a0a0a] text-white"
+              : "text-[#5f5f5f] hover:bg-[#f7f8fa] hover:text-[#0a0a0a]"
           }`}
         >
           Manual
@@ -40,10 +40,10 @@ export default function ExpenseCreateTabs({
         <button
           type="button"
           onClick={() => setMode("receipt")}
-          className={`rounded-md px-4 py-2 text-sm font-medium ${
+          className={`rounded-full px-4 py-2 text-sm font-medium ${
             mode === "receipt"
-              ? "bg-emerald-700 text-white"
-              : "text-zinc-600 hover:bg-zinc-50 hover:text-zinc-950"
+              ? "bg-[#0a0a0a] text-white"
+              : "text-[#5f5f5f] hover:bg-[#f7f8fa] hover:text-[#0a0a0a]"
           }`}
         >
           Upload receipt

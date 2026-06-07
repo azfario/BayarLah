@@ -125,7 +125,7 @@ export default function ExpenseForm({ friends }: ExpenseFormProps) {
   return (
     <form
       action={createExpense}
-      className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm sm:p-6"
+      className="rounded-xl border border-[#e5e7eb] bg-white p-4 shadow-sm sm:p-6"
     >
       <div className="grid gap-5 md:grid-cols-2">
         <label className="flex flex-col gap-2">
@@ -134,7 +134,7 @@ export default function ExpenseForm({ friends }: ExpenseFormProps) {
             name="description"
             required
             placeholder="Dinner at mamak"
-            className="rounded-md border border-zinc-300 px-3 py-2 outline-none focus:border-emerald-600"
+            className="h-10 rounded-md border border-[#e5e7eb] bg-white px-4 outline-none placeholder:text-[#8e8e93] focus:border-2 focus:border-[#1d4ed8]"
           />
         </label>
 
@@ -149,7 +149,7 @@ export default function ExpenseForm({ friends }: ExpenseFormProps) {
             value={totalAmount}
             onChange={(event) => setTotalAmount(event.target.value)}
             placeholder="65.00"
-            className="rounded-md border border-zinc-300 px-3 py-2 outline-none focus:border-emerald-600"
+            className="h-10 rounded-md border border-[#e5e7eb] bg-white px-4 outline-none placeholder:text-[#8e8e93] focus:border-2 focus:border-[#1d4ed8]"
           />
         </label>
       </div>
@@ -157,7 +157,7 @@ export default function ExpenseForm({ friends }: ExpenseFormProps) {
       <fieldset className="mt-5">
         <legend className="text-sm font-medium">Split mode</legend>
         <div className="mt-2 grid gap-3 md:grid-cols-2">
-          <label className="flex cursor-pointer items-start gap-3 rounded-md border border-zinc-200 p-4">
+          <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-[#e5e7eb] bg-[#f7f8fa] p-4">
             <input
               type="radio"
               name="splitMode"
@@ -174,7 +174,7 @@ export default function ExpenseForm({ friends }: ExpenseFormProps) {
             </span>
           </label>
 
-          <label className="flex cursor-pointer items-start gap-3 rounded-md border border-zinc-200 p-4">
+          <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-[#e5e7eb] bg-[#f7f8fa] p-4">
             <input
               type="radio"
               name="splitMode"
@@ -197,7 +197,7 @@ export default function ExpenseForm({ friends }: ExpenseFormProps) {
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <h2 className="text-sm font-medium">Saved friends</h2>
           {splitMode === "EQUAL_SPLIT" && equalShareCents > 0 ? (
-            <span className="text-sm text-emerald-700 sm:text-right">
+            <span className="text-sm text-[#1d4ed8] sm:text-right">
               Each selected friend owes {formatMoney(equalShareCents / 100)}
             </span>
           ) : null}
@@ -210,22 +210,22 @@ export default function ExpenseForm({ friends }: ExpenseFormProps) {
                 value={friendSearch}
                 onChange={(event) => setFriendSearch(event.target.value)}
                 placeholder="Search by name or phone"
-                className="w-full rounded-md border border-zinc-300 px-3 py-2 outline-none focus:border-emerald-600"
+                className="h-10 w-full rounded-md border border-[#e5e7eb] bg-white px-4 outline-none placeholder:text-[#8e8e93] focus:border-2 focus:border-[#1d4ed8]"
               />
-              <div className="mt-2 max-h-64 overflow-y-auto rounded-md border border-zinc-200 bg-white shadow-sm">
+              <div className="mt-2 max-h-64 overflow-y-auto rounded-lg border border-[#e5e7eb] bg-white shadow-sm">
                 {searchableFriends.length > 0 ? (
                   searchableFriends.map((friend) => (
                     <button
                       key={friend.id}
                       type="button"
                       onClick={() => addSelectedFriend(friend.id)}
-                      className="flex min-w-0 w-full items-center justify-between gap-4 border-b border-zinc-100 px-3 py-2 text-left last:border-b-0 hover:bg-emerald-50"
+                      className="flex min-w-0 w-full items-center justify-between gap-4 border-b border-[#eaecf0] px-3 py-2 text-left last:border-b-0 hover:bg-[#f7f8fa]"
                     >
                       <span className="min-w-0">
                         <span className="block break-words font-medium">{friend.name}</span>
                         <span className="block break-all text-sm text-zinc-500">{friend.phone}</span>
                       </span>
-                      <span className="text-sm font-medium text-emerald-700">Add</span>
+                      <span className="text-sm font-medium text-[#0a0a0a]">Add</span>
                     </button>
                   ))
                 ) : (
@@ -241,7 +241,7 @@ export default function ExpenseForm({ friends }: ExpenseFormProps) {
                 {selectedFriends.map((friend) => (
                   <div
                     key={friend.id}
-                    className="grid gap-3 rounded-md border border-zinc-200 p-4 md:grid-cols-[1fr_180px_auto]"
+                    className="grid gap-3 rounded-lg border border-[#e5e7eb] bg-[#f7f8fa] p-4 md:grid-cols-[1fr_180px_auto]"
                   >
                     <input type="hidden" name="friendIds" value={friend.id} />
                     <div className="min-w-0">
@@ -265,7 +265,8 @@ export default function ExpenseForm({ friends }: ExpenseFormProps) {
                               [friend.id]: event.target.value,
                             }))
                           }
-                          className="rounded-md border border-zinc-300 px-3 py-2 outline-none focus:border-emerald-600"
+                          placeholder="25.00"
+                          className="h-10 rounded-md border border-[#e5e7eb] bg-white px-4 outline-none placeholder:text-[#8e8e93] focus:border-2 focus:border-[#1d4ed8]"
                         />
                       </label>
                     ) : (
@@ -276,7 +277,7 @@ export default function ExpenseForm({ friends }: ExpenseFormProps) {
                       <button
                         type="button"
                         onClick={() => removeSelectedFriend(friend.id)}
-                        className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm font-medium text-zinc-600 hover:bg-zinc-50 sm:w-auto"
+                        className="w-full rounded-full border border-[#0a0a0a] bg-white px-6 py-[11px] text-sm font-semibold text-[#0a0a0a] hover:bg-[#f7f8fa] sm:w-auto"
                       >
                         Remove
                       </button>
@@ -297,13 +298,13 @@ export default function ExpenseForm({ friends }: ExpenseFormProps) {
         )}
       </section>
 
-      <section className="mt-5 rounded-md border border-zinc-200 p-4">
+      <section className="mt-5 rounded-lg border border-[#e5e7eb] bg-[#f7f8fa] p-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <h2 className="text-sm font-medium">Add new friends inline</h2>
           <button
             type="button"
             onClick={addInlineFriend}
-            className="w-full rounded-md border border-emerald-700 px-3 py-2 text-sm font-medium text-emerald-700 hover:bg-emerald-50 sm:w-auto"
+            className="w-full rounded-full border border-[#0a0a0a] bg-white px-6 py-[11px] text-sm font-semibold text-[#0a0a0a] hover:bg-white sm:w-auto"
           >
             + Add friend
           </button>
@@ -319,7 +320,7 @@ export default function ExpenseForm({ friends }: ExpenseFormProps) {
             return (
               <div
                 key={friend.key}
-                className="grid gap-4 rounded-md border border-zinc-100 bg-zinc-50 p-4 md:grid-cols-[1fr_1fr_160px_auto]"
+                className="grid gap-4 rounded-lg border border-[#e5e7eb] bg-[#f2f3f5] p-4 md:grid-cols-[1fr_1fr_160px_auto]"
               >
                 <input type="hidden" name="inlineFriendKeys" value={friend.key} />
 
@@ -332,7 +333,8 @@ export default function ExpenseForm({ friends }: ExpenseFormProps) {
                     onChange={(event) =>
                       updateInlineFriend(friend.key, "name", event.target.value)
                     }
-                    className="rounded-md border border-zinc-300 bg-white px-3 py-2 outline-none focus:border-emerald-600"
+                    placeholder="Nur Aisyah"
+                    className="h-10 rounded-md border border-[#e5e7eb] bg-white px-4 outline-none placeholder:text-[#8e8e93] focus:border-2 focus:border-[#1d4ed8]"
                   />
                 </label>
 
@@ -346,7 +348,7 @@ export default function ExpenseForm({ friends }: ExpenseFormProps) {
                       updateInlineFriend(friend.key, "phone", event.target.value)
                     }
                     placeholder="0123456789"
-                    className="rounded-md border border-zinc-300 bg-white px-3 py-2 outline-none focus:border-emerald-600"
+                    className="h-10 rounded-md border border-[#e5e7eb] bg-white px-4 outline-none placeholder:text-[#8e8e93] focus:border-2 focus:border-[#1d4ed8]"
                   />
                 </label>
 
@@ -367,7 +369,8 @@ export default function ExpenseForm({ friends }: ExpenseFormProps) {
                           event.target.value
                         )
                       }
-                      className="rounded-md border border-zinc-300 bg-white px-3 py-2 outline-none focus:border-emerald-600"
+                      placeholder="25.00"
+                      className="h-10 rounded-md border border-[#e5e7eb] bg-white px-4 outline-none placeholder:text-[#8e8e93] focus:border-2 focus:border-[#1d4ed8]"
                     />
                   </label>
                 ) : (
@@ -378,7 +381,7 @@ export default function ExpenseForm({ friends }: ExpenseFormProps) {
                   <button
                     type="button"
                     onClick={() => removeInlineFriend(friend.key)}
-                    className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm font-medium text-zinc-600 hover:bg-white sm:w-auto"
+                    className="w-full rounded-full border border-[#0a0a0a] bg-white px-6 py-[11px] text-sm font-semibold text-[#0a0a0a] hover:bg-white sm:w-auto"
                   >
                     {inlineFriends.length === 1 && index === 0 ? "Clear" : "Remove"}
                   </button>
@@ -402,18 +405,18 @@ export default function ExpenseForm({ friends }: ExpenseFormProps) {
               value={collectorAmount}
               onChange={(event) => setCollectorAmount(event.target.value)}
               placeholder="15.00"
-              className="rounded-md border border-zinc-300 px-3 py-2 outline-none focus:border-emerald-600"
+              className="h-10 rounded-md border border-[#e5e7eb] bg-white px-4 outline-none placeholder:text-[#8e8e93] focus:border-2 focus:border-[#1d4ed8]"
             />
           </label>
 
-          <div className="rounded-md border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm text-zinc-600">
+          <div className="rounded-lg border border-[#e5e7eb] bg-[#f7f8fa] px-4 py-3 text-sm text-zinc-600">
             Enter your own purchase amount plus what each friend owes. BayarLah will still save if the numbers do not match the total.
           </div>
         </section>
       ) : null}
 
       {showCustomWarning ? (
-        <div className="mt-5 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+        <div className="mt-5 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
           These amounts add up to {formatMoney(customTotalCents / 100)}, but the total paid is{" "}
           {formatMoney(totalCents / 100)}. You can still save this expense.
         </div>

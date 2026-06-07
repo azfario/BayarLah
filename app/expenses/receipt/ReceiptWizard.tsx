@@ -386,7 +386,7 @@ export default function ReceiptWizard({
 
   return (
     <div className="grid gap-6">
-      <section className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm sm:p-6">
+      <section className="rounded-xl border border-[#e5e7eb] bg-white p-4 shadow-sm sm:p-6">
         <form
           onSubmit={handleReceiptSubmit}
           className="grid gap-4 md:grid-cols-[1fr_auto]"
@@ -400,7 +400,7 @@ export default function ReceiptWizard({
               capture="environment"
               required
               onChange={(event) => updateReceiptFile(event.target.files?.[0] ?? null)}
-              className="rounded-md border border-zinc-300 px-3 py-2 text-sm outline-none focus:border-emerald-600"
+              className="h-10 rounded-md border border-[#e5e7eb] bg-white px-3 py-2 text-sm outline-none focus:border-2 focus:border-[#1d4ed8]"
             />
             <span className="text-xs text-zinc-500">
               Take a photo on mobile or choose an existing image. The photo is only used for OCR.
@@ -411,7 +411,7 @@ export default function ReceiptWizard({
             <button
               type="submit"
               disabled={isParsing}
-              className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-emerald-700 px-5 py-2 font-medium text-white hover:bg-emerald-800 disabled:cursor-wait disabled:bg-emerald-600 md:w-auto"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#0a0a0a] px-6 py-[11px] text-sm font-semibold text-white hover:bg-[#222222] disabled:cursor-wait disabled:bg-[#e5e7eb] disabled:text-[#a8aab2] md:w-auto"
             >
               {isParsing ? (
                 <>
@@ -430,7 +430,7 @@ export default function ReceiptWizard({
         ) : null}
 
         {receiptPreviewUrl && !draft ? (
-          <div className="mt-4 rounded-md border border-zinc-200 bg-zinc-50 p-3">
+          <div className="mt-4 rounded-lg border border-[#e5e7eb] bg-[#f7f8fa] p-3">
             <img
               src={receiptPreviewUrl}
               alt="Temporary receipt preview"
@@ -449,7 +449,7 @@ export default function ReceiptWizard({
       {draft ? (
         <div className="grid min-w-0 gap-6 lg:grid-cols-[300px_minmax(0,1fr)]">
           {receiptPreviewUrl ? (
-            <aside className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm">
+            <aside className="rounded-xl border border-[#e5e7eb] bg-white p-4 shadow-sm">
               <img
                 src={receiptPreviewUrl}
                 alt="Temporary receipt preview"
@@ -529,14 +529,15 @@ function ReceiptDetails({
   ) => void;
 }) {
   return (
-    <div className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm sm:p-6">
+    <div className="rounded-xl border border-[#e5e7eb] bg-white p-4 shadow-sm sm:p-6">
       <div className="grid gap-4 md:grid-cols-3">
         <label className="flex flex-col gap-2 md:col-span-3">
           <span className="text-sm font-medium">Description</span>
           <input
             value={description}
             onChange={(event) => onDescriptionChange(event.target.value)}
-            className="rounded-md border border-zinc-300 px-3 py-2 outline-none focus:border-emerald-600"
+            placeholder="Team lunch at Nasi Kandar"
+            className="h-10 rounded-md border border-[#e5e7eb] bg-white px-4 outline-none placeholder:text-[#8e8e93] focus:border-2 focus:border-[#1d4ed8]"
           />
         </label>
 
@@ -545,7 +546,8 @@ function ReceiptDetails({
           <input
             value={draft.merchantName}
             onChange={(event) => onDraftFieldChange("merchantName", event.target.value)}
-            className="rounded-md border border-zinc-300 px-3 py-2 outline-none focus:border-emerald-600"
+            placeholder="Restoran Maju"
+            className="h-10 rounded-md border border-[#e5e7eb] bg-white px-4 outline-none placeholder:text-[#8e8e93] focus:border-2 focus:border-[#1d4ed8]"
           />
         </label>
 
@@ -554,33 +556,39 @@ function ReceiptDetails({
           <input
             value={draft.receiptDate}
             onChange={(event) => onDraftFieldChange("receiptDate", event.target.value)}
-            className="rounded-md border border-zinc-300 px-3 py-2 outline-none focus:border-emerald-600"
+            placeholder="2026-06-07"
+            className="h-10 rounded-md border border-[#e5e7eb] bg-white px-4 outline-none placeholder:text-[#8e8e93] focus:border-2 focus:border-[#1d4ed8]"
           />
         </label>
 
         <MoneyInput
           label="Total"
           value={draft.totalAmount}
+          placeholder="65.00"
           onChange={(value) => onDraftFieldChange("totalAmount", value)}
         />
         <MoneyInput
           label="Subtotal"
           value={draft.subtotalAmount}
+          placeholder="60.00"
           onChange={(value) => onDraftFieldChange("subtotalAmount", value)}
         />
         <MoneyInput
           label="Tax"
           value={draft.taxAmount}
+          placeholder="3.60"
           onChange={(value) => onDraftFieldChange("taxAmount", value)}
         />
         <MoneyInput
           label="Service charge"
           value={draft.serviceChargeAmount}
+          placeholder="1.40"
           onChange={(value) => onDraftFieldChange("serviceChargeAmount", value)}
         />
         <MoneyInput
           label="Rounding"
           value={draft.roundingAmount}
+          placeholder="0.00"
           onChange={(value) => onDraftFieldChange("roundingAmount", value)}
         />
       </div>
@@ -596,10 +604,10 @@ function SplitModePicker({
   onChange: (mode: SplitMode) => void;
 }) {
   return (
-    <fieldset className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm sm:p-6">
+    <fieldset className="rounded-xl border border-[#e5e7eb] bg-white p-4 shadow-sm sm:p-6">
       <legend className="text-sm font-medium">Split mode</legend>
       <div className="mt-2 grid gap-3 md:grid-cols-2">
-        <label className="flex cursor-pointer items-start gap-3 rounded-md border border-zinc-200 p-4">
+        <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-[#e5e7eb] bg-[#f7f8fa] p-4">
           <input
             type="radio"
             value="EQUAL_SPLIT"
@@ -615,7 +623,7 @@ function SplitModePicker({
           </span>
         </label>
 
-        <label className="flex cursor-pointer items-start gap-3 rounded-md border border-zinc-200 p-4">
+        <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-[#e5e7eb] bg-[#f7f8fa] p-4">
           <input
             type="radio"
             value="CUSTOM_AMOUNT"
@@ -665,13 +673,13 @@ function ParticipantsSection({
   ) => void;
 }) {
   return (
-    <div className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm sm:p-6">
+    <div className="rounded-xl border border-[#e5e7eb] bg-white p-4 shadow-sm sm:p-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <h2 className="text-xl font-semibold">Participants</h2>
         <button
           type="button"
           onClick={onAddInlineFriend}
-          className="w-full rounded-md border border-emerald-700 px-3 py-2 text-sm font-medium text-emerald-700 hover:bg-emerald-50 sm:w-auto"
+          className="w-full rounded-full border border-[#0a0a0a] bg-white px-6 py-[11px] text-sm font-semibold text-[#0a0a0a] hover:bg-[#f7f8fa] sm:w-auto"
         >
           + Add friend
         </button>
@@ -684,16 +692,16 @@ function ParticipantsSection({
               value={friendSearch}
               onChange={(event) => onFriendSearchChange(event.target.value)}
               placeholder="Search saved friends"
-              className="w-full rounded-md border border-zinc-300 px-3 py-2 outline-none focus:border-emerald-600"
+              className="h-10 w-full rounded-md border border-[#e5e7eb] bg-white px-4 outline-none placeholder:text-[#8e8e93] focus:border-2 focus:border-[#1d4ed8]"
             />
-            <div className="mt-2 max-h-56 overflow-y-auto rounded-md border border-zinc-200 bg-white">
+              <div className="mt-2 max-h-56 overflow-y-auto rounded-lg border border-[#e5e7eb] bg-white">
               {searchableFriends.length > 0 ? (
                 searchableFriends.map((friend) => (
                   <button
                     key={friend.id}
                     type="button"
                     onClick={() => onAddFriend(friend.id)}
-                    className="flex min-w-0 w-full items-center justify-between gap-4 border-b border-zinc-100 px-3 py-2 text-left last:border-b-0 hover:bg-emerald-50"
+                    className="flex min-w-0 w-full items-center justify-between gap-4 border-b border-[#eaecf0] px-3 py-2 text-left last:border-b-0 hover:bg-[#f7f8fa]"
                   >
                     <span className="min-w-0">
                       <span className="block break-words font-medium">{friend.name}</span>
@@ -701,7 +709,7 @@ function ParticipantsSection({
                         {friend.phone}
                       </span>
                     </span>
-                    <span className="text-sm font-medium text-emerald-700">Add</span>
+                    <span className="text-sm font-medium text-[#0a0a0a]">Add</span>
                   </button>
                 ))
               ) : (
@@ -718,7 +726,7 @@ function ParticipantsSection({
             {selectedFriends.map((friend) => (
               <div
                 key={friend.id}
-                className="flex flex-col gap-3 rounded-md border border-zinc-200 px-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:py-2"
+                className="flex flex-col gap-3 rounded-lg border border-[#e5e7eb] bg-[#f7f8fa] px-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:py-2"
               >
                 <span className="min-w-0">
                   <span className="block break-words font-medium">{friend.name}</span>
@@ -729,7 +737,7 @@ function ParticipantsSection({
                 <button
                   type="button"
                   onClick={() => onRemoveFriend(friend.id)}
-                  className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm font-medium text-zinc-600 hover:bg-zinc-50 sm:w-auto"
+                  className="w-full rounded-full border border-[#0a0a0a] bg-white px-6 py-[11px] text-sm font-semibold text-[#0a0a0a] hover:bg-white sm:w-auto"
                 >
                   Remove
                 </button>
@@ -745,7 +753,7 @@ function ParticipantsSection({
             return (
               <div
                 key={friend.key}
-                className="grid gap-3 rounded-md border border-zinc-100 bg-zinc-50 p-4 md:grid-cols-[1fr_1fr_auto]"
+                className="grid gap-3 rounded-lg border border-[#e5e7eb] bg-[#f7f8fa] p-4 md:grid-cols-[1fr_1fr_auto]"
               >
                 <label className="flex flex-col gap-2">
                   <span className="text-sm font-medium">Name</span>
@@ -755,7 +763,8 @@ function ParticipantsSection({
                     onChange={(event) =>
                       onUpdateInlineFriend(friend.key, "name", event.target.value)
                     }
-                    className="rounded-md border border-zinc-300 bg-white px-3 py-2 outline-none focus:border-emerald-600"
+                    placeholder="Nur Aisyah"
+                    className="h-10 rounded-md border border-[#e5e7eb] bg-white px-4 outline-none placeholder:text-[#8e8e93] focus:border-2 focus:border-[#1d4ed8]"
                   />
                 </label>
 
@@ -768,7 +777,7 @@ function ParticipantsSection({
                       onUpdateInlineFriend(friend.key, "phone", event.target.value)
                     }
                     placeholder="0123456789"
-                    className="rounded-md border border-zinc-300 bg-white px-3 py-2 outline-none focus:border-emerald-600"
+                    className="h-10 rounded-md border border-[#e5e7eb] bg-white px-4 outline-none placeholder:text-[#8e8e93] focus:border-2 focus:border-[#1d4ed8]"
                   />
                 </label>
 
@@ -776,7 +785,7 @@ function ParticipantsSection({
                   <button
                     type="button"
                     onClick={() => onRemoveInlineFriend(friend.key)}
-                    className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm font-medium text-zinc-600 hover:bg-white sm:w-auto"
+                    className="w-full rounded-full border border-[#0a0a0a] bg-white px-6 py-[11px] text-sm font-semibold text-[#0a0a0a] hover:bg-white sm:w-auto"
                   >
                     {inlineFriends.length === 1 && index === 0 ? "Clear" : "Remove"}
                   </button>
@@ -820,13 +829,13 @@ function ParsedItemsSection({
   ) => void;
 }) {
   return (
-    <div className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm sm:p-6">
+    <div className="rounded-xl border border-[#e5e7eb] bg-white p-4 shadow-sm sm:p-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
         <h2 className="text-xl font-semibold">Parsed items</h2>
         <button
           type="button"
           onClick={onAddItem}
-          className="w-full rounded-md border border-emerald-700 px-3 py-2 text-sm font-medium text-emerald-700 hover:bg-emerald-50 sm:w-auto"
+          className="w-full rounded-full border border-[#0a0a0a] bg-white px-6 py-[11px] text-sm font-semibold text-[#0a0a0a] hover:bg-[#f7f8fa] sm:w-auto"
         >
           + Add item
         </button>
@@ -836,7 +845,7 @@ function ParsedItemsSection({
         {draft.items.map((item) => (
           <div
             key={item.key}
-            className="grid gap-3 rounded-md border border-zinc-200 p-4 md:grid-cols-[1fr_100px_140px_auto]"
+            className="grid gap-3 rounded-lg border border-[#e5e7eb] bg-[#f7f8fa] p-4 md:grid-cols-[1fr_100px_140px_auto]"
           >
             <label className="flex flex-col gap-2">
               <span className="text-sm font-medium">Item</span>
@@ -845,7 +854,8 @@ function ParsedItemsSection({
                 onChange={(event) =>
                   onUpdateItem(item.key, "name", event.target.value)
                 }
-                className="rounded-md border border-zinc-300 px-3 py-2 outline-none focus:border-emerald-600"
+                placeholder="Chicken rice"
+                className="h-10 rounded-md border border-[#e5e7eb] bg-white px-4 outline-none placeholder:text-[#8e8e93] focus:border-2 focus:border-[#1d4ed8]"
               />
             </label>
 
@@ -859,13 +869,15 @@ function ParsedItemsSection({
                 onChange={(event) =>
                   onUpdateItem(item.key, "quantity", event.target.value)
                 }
-                className="rounded-md border border-zinc-300 px-3 py-2 outline-none focus:border-emerald-600"
+                placeholder="1"
+                className="h-10 rounded-md border border-[#e5e7eb] bg-white px-4 outline-none placeholder:text-[#8e8e93] focus:border-2 focus:border-[#1d4ed8]"
               />
             </label>
 
             <MoneyInput
               label="Unit price"
               value={item.unitAmount}
+              placeholder="12.50"
               onChange={(value) => onUpdateItem(item.key, "unitAmount", value)}
             />
 
@@ -874,7 +886,7 @@ function ParsedItemsSection({
                 type="button"
                 onClick={() => onRemoveItem(item.key)}
                 disabled={draft.items.length === 1}
-                className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm font-medium text-zinc-600 hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+                className="w-full rounded-full border border-[#0a0a0a] bg-white px-6 py-[11px] text-sm font-semibold text-[#0a0a0a] hover:bg-white disabled:cursor-not-allowed disabled:border-[#e5e7eb] disabled:bg-[#e5e7eb] disabled:text-[#a8aab2] sm:w-auto"
               >
                 Remove
               </button>
@@ -894,7 +906,7 @@ function ParsedItemsSection({
           onSelectItem={onSelectItem}
         />
       ) : (
-        <p className="mt-4 rounded-md bg-zinc-50 px-4 py-3 text-sm text-zinc-600">
+        <p className="mt-4 rounded-lg bg-[#f7f8fa] px-4 py-3 text-sm text-zinc-600">
           Equal split uses the receipt total. Parsed items are saved for history.
         </p>
       )}
@@ -935,10 +947,10 @@ function CustomItemMatcher({
                 key={item.key}
                 type="button"
                 onClick={() => onSelectItem(item.key)}
-                className={`rounded-md border px-3 py-2 text-left text-sm ${
+                className={`rounded-lg border px-3 py-2 text-left text-sm ${
                   selectedItemKey === item.key
-                    ? "border-emerald-600 bg-emerald-50"
-                    : "border-zinc-200 bg-zinc-50 hover:bg-emerald-50"
+                    ? "border-[#1d4ed8] bg-white"
+                    : "border-[#e5e7eb] bg-[#f7f8fa] hover:bg-white"
                 }`}
               >
                 <span className="block font-medium">
@@ -968,7 +980,7 @@ function CustomItemMatcher({
             return (
               <div
                 key={participant.key}
-                className="rounded-md border border-zinc-200 p-4"
+                className="rounded-lg border border-[#e5e7eb] bg-[#f7f8fa] p-4"
               >
                 <button
                   type="button"
@@ -986,7 +998,7 @@ function CustomItemMatcher({
                       </span>
                     ) : null}
                   </span>
-                  <span className="shrink-0 text-sm font-medium text-emerald-700">
+                  <span className="shrink-0 text-sm font-medium text-[#1d4ed8]">
                     {formatMoney(subtotalCents / 100)}
                   </span>
                 </button>
@@ -999,7 +1011,7 @@ function CustomItemMatcher({
                       return (
                         <div
                           key={assignment.id}
-                          className="flex flex-col gap-2 rounded-md bg-zinc-50 px-3 py-2 text-sm sm:flex-row sm:items-center sm:justify-between"
+                          className="flex flex-col gap-2 rounded-lg bg-[#f7f8fa] px-3 py-2 text-sm sm:flex-row sm:items-center sm:justify-between"
                         >
                           <span className="min-w-0 break-words">
                             {item?.name || "Item"} -{" "}
@@ -1044,7 +1056,7 @@ function FinalAmountsSection({
   description: string;
 }) {
   return (
-    <div className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm sm:p-6">
+    <div className="rounded-xl border border-[#e5e7eb] bg-white p-4 shadow-sm sm:p-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h2 className="text-xl font-semibold">Final amounts</h2>
@@ -1061,7 +1073,7 @@ function FinalAmountsSection({
         {review?.participantSummaries.map((participant) => (
           <div
             key={participant.key}
-            className="flex items-start justify-between gap-3 rounded-md bg-zinc-50 px-3 py-2 text-sm"
+            className="flex items-start justify-between gap-3 rounded-lg bg-[#f7f8fa] px-3 py-2 text-sm"
           >
             <span className="min-w-0 break-words">{participant.name}</span>
             <span className="shrink-0 font-medium">
@@ -1072,7 +1084,7 @@ function FinalAmountsSection({
       </div>
 
       {review && review.errors.length > 0 ? (
-        <div className="mt-4 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+        <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
           <ul className="list-inside list-disc">
             {review.errors.map((error) => (
               <li key={error}>{error}</li>
@@ -1082,7 +1094,7 @@ function FinalAmountsSection({
       ) : null}
 
       {saveError ? (
-        <div className="mt-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
           {saveError}
         </div>
       ) : null}
@@ -1095,7 +1107,7 @@ function FinalAmountsSection({
           <button
             type="submit"
             disabled={!review?.canSave || isSaving}
-            className="inline-flex w-full items-center justify-center gap-2 rounded-md bg-emerald-700 px-5 py-2 font-medium text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:bg-zinc-300 sm:w-auto"
+            className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#0a0a0a] px-6 py-[11px] text-sm font-semibold text-white hover:bg-[#222222] disabled:cursor-not-allowed disabled:bg-[#e5e7eb] disabled:text-[#a8aab2] sm:w-auto"
           >
             {isSaving ? (
               <>
@@ -1115,10 +1127,12 @@ function FinalAmountsSection({
 function MoneyInput({
   label,
   value,
+  placeholder,
   onChange,
 }: {
   label: string;
   value: string;
+  placeholder: string;
   onChange: (value: string) => void;
 }) {
   return (
@@ -1128,8 +1142,9 @@ function MoneyInput({
         type="number"
         step="0.01"
         value={value}
+        placeholder={placeholder}
         onChange={(event) => onChange(event.target.value)}
-        className="rounded-md border border-zinc-300 px-3 py-2 outline-none focus:border-emerald-600"
+        className="h-10 rounded-md border border-[#e5e7eb] bg-white px-4 outline-none placeholder:text-[#8e8e93] focus:border-2 focus:border-[#1d4ed8]"
       />
     </label>
   );
