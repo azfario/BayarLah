@@ -24,11 +24,10 @@ test("builds the friendly DuitNow reminder message", () => {
       "Please pay using the DuitNow QR attached OR send to",
       "DuitNow phone number: 0123456789",
       "",
-      "Enter payment code:",
-      "48273195",
+      "Enter payment code: **48273195**",
       "in the transfer Reference/Remark field.",
       "",
-      "After paying, send the payment receipt image back to this chat reply.",
+      "After paying, send the payment receipt image (no PDF, just screenshot or the receipt image) back to this chat reply.",
     ].join("\n")
   );
 });
