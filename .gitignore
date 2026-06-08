@@ -51,5 +51,3 @@ workers/**/*.data.json
 workers/**/logs/
 AGENTS.md
 DESIGN.md
-
-deploy/

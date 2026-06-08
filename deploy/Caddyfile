@@ -1,0 +1,4 @@
+{$WORKER_DOMAIN} {
+  encode zstd gzip
+  reverse_proxy openwa-api:2785
+}
