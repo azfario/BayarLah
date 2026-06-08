@@ -45,8 +45,6 @@ services:
     build:
       context: .
       dockerfile: workers/whatsapp/Dockerfile
-    image: bayarlah-whatsapp-worker:novacloud
-    pull_policy: build
     env_file:
       - ${NOVACLOUD_ENV_FILE:-.env.novacloud}
     environment:
