@@ -1,0 +1,1793 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BayarLah — Pitch Deck</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap"
+    rel="stylesheet">
+  <style>
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --primary: #0a0a0a;
+      --on-primary: #ffffff;
+      --canvas: #ffffff;
+      --surface: #f7f8fa;
+      --hairline: #e5e7eb;
+      --ink: #0a0a0a;
+      --slate: #45515e;
+      --stone: #8e8e93;
+      --muted: #a8aab2;
+      --coral: #ff5530;
+      --magenta: #ea5ec1;
+      --blue: #1456f0;
+      --purple: #a855f7;
+      --cyan: #3daeff;
+      --success-bg: #e8ffea;
+      --success-text: #1ba673;
+    }
+
+    body {
+      --deck-scale: 1;
+      font-family: 'DM Sans', sans-serif;
+      background: #111;
+      color: var(--ink);
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      user-select: none;
+    }
+
+    body.presentation-mode {
+      background: #000;
+    }
+
+    .deck-shell {
+      width: calc(960px * var(--deck-scale));
+      height: calc(540px * var(--deck-scale));
+      position: relative;
+      flex-shrink: 0;
+    }
+
+    body.presentation-mode .deck-shell {
+      width: 100vw;
+      height: 100vh;
+      background: #000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .deck {
+      width: 960px;
+      height: 540px;
+      position: relative;
+      overflow: hidden;
+      border-radius: 16px;
+      box-shadow: 0 40px 120px rgba(0, 0, 0, 0.6);
+      transform: scale(var(--deck-scale));
+      transform-origin: top left;
+    }
+
+    body.presentation-mode .deck {
+      border-radius: 0;
+      box-shadow: none;
+      transform-origin: center;
+    }
+
+    .slide {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.35s ease;
+      overflow: hidden;
+    }
+
+    .slide.active {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    /* NAV */
+    .nav {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-top: 20px;
+    }
+
+    .nav-btn {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: #fff;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 8px 20px;
+      border-radius: 9999px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .nav-btn:hover {
+      background: rgba(255, 255, 255, 0.14);
+    }
+
+    .nav-btn:disabled {
+      opacity: 0.3;
+      cursor: default;
+    }
+
+    .slide-counter {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px;
+      color: rgba(255, 255, 255, 0.4);
+      min-width: 60px;
+      text-align: center;
+    }
+
+    /* DOTS */
+    .dots {
+      display: flex;
+      gap: 6px;
+      margin-top: 12px;
+    }
+
+    .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.2);
+      cursor: pointer;
+      transition: background 0.2s, transform 0.2s;
+    }
+
+    .dot.active {
+      background: #fff;
+      transform: scale(1.3);
+    }
+
+    body.presentation-mode .nav,
+    body.presentation-mode .dots {
+      display: none;
+    }
+
+    /* ============================================================
+     SLIDE 1 — COVER (dark)
+  ============================================================ */
+    .s1 {
+      background: var(--primary);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0;
+      position: relative;
+    }
+
+    .s1::before {
+      content: '';
+      position: absolute;
+      width: 600px;
+      height: 600px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(255, 85, 48, 0.12) 0%, transparent 70%);
+      top: -200px;
+      left: -100px;
+      pointer-events: none;
+    }
+
+    .s1-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 40px;
+    }
+
+    .s1-logo-mark {
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: none;
+    }
+
+    .s1-logo-text {
+      font-size: 22px;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: -0.5px;
+    }
+
+    .s1-hero {
+      font-size: 68px;
+      font-weight: 600;
+      color: #fff;
+      letter-spacing: -2px;
+      line-height: 1.08;
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .s1-hero span {
+      color: var(--coral);
+    }
+
+    .s1-sub {
+      font-size: 18px;
+      font-weight: 400;
+      color: rgba(255, 255, 255, 0.5);
+      text-align: center;
+      letter-spacing: -0.2px;
+    }
+
+    .s1-badges {
+      display: flex;
+      gap: 10px;
+      margin-top: 36px;
+    }
+
+    .badge-pill {
+      font-size: 13px;
+      font-weight: 600;
+      padding: 6px 14px;
+      border-radius: 9999px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      color: rgba(255, 255, 255, 0.55);
+    }
+
+    .badge-pill.coral {
+      border-color: rgba(255, 85, 48, 0.4);
+      color: var(--coral);
+      background: rgba(255, 85, 48, 0.08);
+    }
+
+    /* ============================================================
+     SLIDE 2 — PROBLEM
+  ============================================================ */
+    .s2 {
+      background: var(--canvas);
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      height: 100%;
+    }
+
+    .s2-left {
+      background: var(--primary);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 60px 48px;
+    }
+
+    .s2-eyebrow {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--coral);
+      margin-bottom: 20px;
+    }
+
+    .s2-heading {
+      font-size: 40px;
+      font-weight: 600;
+      color: #fff;
+      letter-spacing: -1px;
+      line-height: 1.15;
+      margin-bottom: 20px;
+    }
+
+    .s2-body {
+      font-size: 16px;
+      font-weight: 400;
+      color: rgba(255, 255, 255, 0.55);
+      line-height: 1.6;
+    }
+
+    .s2-right {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 52px 48px;
+      gap: 20px;
+      background: var(--surface);
+    }
+
+    .pain-card {
+      background: var(--canvas);
+      border: 1px solid var(--hairline);
+      border-radius: 12px;
+      padding: 18px 20px;
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+    }
+
+    .pain-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-size: 18px;
+    }
+
+    .pain-icon.red {
+      background: #fff0ed;
+      color: var(--coral);
+    }
+
+    .pain-icon.amber {
+      background: #fff8ed;
+      color: #e08000;
+    }
+
+    .pain-icon.blue {
+      background: #edf4ff;
+      color: var(--blue);
+    }
+
+    .pain-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--ink);
+      margin-bottom: 3px;
+    }
+
+    .pain-desc {
+      font-size: 13px;
+      color: var(--slate);
+      line-height: 1.5;
+    }
+
+    /* ============================================================
+     SLIDE 3 — WHY EXISTING SOLUTIONS FAIL
+  ============================================================ */
+    .s3 {
+      background: var(--canvas);
+      display: flex;
+      flex-direction: column;
+      padding: 50px 64px;
+    }
+
+    .slide-eyebrow {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--stone);
+      margin-bottom: 12px;
+    }
+
+    .slide-heading {
+      font-size: 36px;
+      font-weight: 600;
+      color: var(--ink);
+      letter-spacing: -1px;
+      line-height: 1.15;
+      margin-bottom: 36px;
+    }
+
+    .competitor-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      flex: 1;
+    }
+
+    .comp-card {
+      border: 1px solid var(--hairline);
+      border-radius: 12px;
+      padding: 24px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      background: var(--surface);
+      position: relative;
+    }
+
+    .comp-name {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--ink);
+    }
+
+    .comp-tag {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: 9999px;
+      width: fit-content;
+    }
+
+    .comp-tag.miss {
+      background: #fff0ed;
+      color: var(--coral);
+    }
+
+    .comp-gap {
+      font-size: 13px;
+      color: var(--slate);
+      line-height: 1.6;
+      margin-top: 4px;
+    }
+
+    .vs-badge {
+      position: absolute;
+      bottom: -1px;
+      right: 16px;
+      background: var(--primary);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 4px 12px;
+      border-radius: 9999px 9999px 0 0;
+    }
+
+    /* ============================================================
+     SLIDE 4 — SOLUTION
+  ============================================================ */
+    .s4 {
+      background: var(--primary);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 52px 72px;
+      gap: 0;
+    }
+
+    .s4::after {
+      content: '';
+      position: absolute;
+      bottom: -80px;
+      right: -80px;
+      width: 300px;
+      height: 300px;
+      border-radius: 50%;
+      background: rgba(20, 86, 240, 0.08);
+      pointer-events: none;
+    }
+
+    .s4-tagline {
+      font-size: 42px;
+      font-weight: 600;
+      color: #fff;
+      letter-spacing: -1.2px;
+      line-height: 1.12;
+      text-align: center;
+      margin-bottom: 14px;
+    }
+
+    .s4-tagline .hl {
+      color: var(--coral);
+    }
+
+    .s4-sub {
+      font-size: 16px;
+      color: rgba(255, 255, 255, 0.45);
+      text-align: center;
+      margin-bottom: 44px;
+      max-width: 560px;
+    }
+
+    .feature-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+      width: 100%;
+    }
+
+    .feat-card {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 20px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .feat-icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 9px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      margin-bottom: 4px;
+    }
+
+    .feat-icon.coral {
+      background: rgba(255, 85, 48, 0.15);
+      color: var(--coral);
+    }
+
+    .feat-icon.blue {
+      background: rgba(20, 86, 240, 0.2);
+      color: var(--cyan);
+    }
+
+    .feat-icon.purple {
+      background: rgba(168, 85, 247, 0.15);
+      color: var(--purple);
+    }
+
+    .feat-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #fff;
+    }
+
+    .feat-desc {
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.45);
+      line-height: 1.55;
+    }
+
+    /* ============================================================
+     SLIDE 5 — HOW IT WORKS
+  ============================================================ */
+    .s5 {
+      background: var(--canvas);
+      display: flex;
+      flex-direction: column;
+      padding: 44px 64px;
+    }
+
+    .flow-row {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      margin-top: 28px;
+      flex: 1;
+    }
+
+    .flow-step {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      gap: 12px;
+      padding: 24px 16px;
+      background: var(--surface);
+      border-radius: 12px;
+      border: 1px solid var(--hairline);
+      position: relative;
+    }
+
+    .flow-num {
+      width: 32px;
+      height: 32px;
+      background: var(--primary);
+      color: #fff;
+      border-radius: 9999px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    .flow-label {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--ink);
+    }
+
+    .flow-sub {
+      font-size: 12px;
+      color: var(--slate);
+      line-height: 1.5;
+    }
+
+    .flow-arrow {
+      width: 32px;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--stone);
+      font-size: 18px;
+    }
+
+    .flow-note {
+      margin-top: 28px;
+      background: var(--surface);
+      border: 1px solid var(--hairline);
+      border-radius: 12px;
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .flow-note-badge {
+      background: var(--primary);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 4px 12px;
+      border-radius: 9999px;
+      white-space: nowrap;
+    }
+
+    .flow-note-text {
+      font-size: 13px;
+      color: var(--slate);
+      line-height: 1.5;
+    }
+
+    /* ============================================================
+     SLIDE 6 — TECH STACK
+  ============================================================ */
+    .s6 {
+      background: var(--canvas);
+      display: grid;
+      grid-template-columns: 1.1fr 1fr;
+      height: 100%;
+    }
+
+    .s6-left {
+      display: flex;
+      flex-direction: column;
+      padding: 50px 48px;
+      justify-content: center;
+    }
+
+    .s6-right {
+      background: var(--surface);
+      border-left: 1px solid var(--hairline);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 44px 40px;
+      gap: 14px;
+    }
+
+    .tech-layer {
+      background: var(--canvas);
+      border: 1px solid var(--hairline);
+      border-radius: 10px;
+      padding: 14px 18px;
+    }
+
+    .tech-layer-label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: var(--stone);
+      margin-bottom: 8px;
+    }
+
+    .tech-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .tech-pill {
+      font-size: 12px;
+      font-weight: 600;
+      padding: 4px 12px;
+      border-radius: 9999px;
+      background: var(--surface);
+      border: 1px solid var(--hairline);
+      color: var(--ink);
+    }
+
+    .tech-pill.coral {
+      background: rgba(255, 85, 48, 0.07);
+      border-color: rgba(255, 85, 48, 0.2);
+      color: var(--coral);
+    }
+
+    .tech-pill.blue {
+      background: rgba(20, 86, 240, 0.06);
+      border-color: rgba(20, 86, 240, 0.2);
+      color: var(--blue);
+    }
+
+    .arch-note {
+      margin-top: 28px;
+      padding: 16px 20px;
+      background: var(--surface);
+      border-radius: 10px;
+      border: 1px solid var(--hairline);
+      font-size: 13px;
+      color: var(--slate);
+      line-height: 1.6;
+    }
+
+    .arch-note strong {
+      color: var(--ink);
+      font-weight: 600;
+    }
+
+    /* ============================================================
+     SLIDE 7 — DEMO PREVIEW
+  ============================================================ */
+    .s7 {
+      background: var(--primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 60px;
+      padding: 52px 64px;
+    }
+
+    .s7-left {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      flex: 1;
+      max-width: 380px;
+    }
+
+    .s7-heading {
+      font-size: 40px;
+      font-weight: 600;
+      color: #fff;
+      letter-spacing: -1px;
+      line-height: 1.12;
+    }
+
+    .s7-heading span {
+      color: var(--coral);
+    }
+
+    .s7-body {
+      font-size: 15px;
+      color: rgba(255, 255, 255, 0.45);
+      line-height: 1.6;
+    }
+
+    .demo-steps {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 6px;
+    }
+
+    .demo-step {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 13px;
+      color: rgba(255, 255, 255, 0.6);
+    }
+
+    .demo-step .num {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 700;
+      color: rgba(255, 255, 255, 0.5);
+      flex-shrink: 0;
+    }
+
+    .s7-mockup {
+      width: 220px;
+      background: #1a1a1a;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 20px;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+
+    .mock-header {
+      background: rgba(255, 255, 255, 0.05);
+      padding: 14px 16px 12px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+    }
+
+    .mock-header-label {
+      font-size: 11px;
+      color: rgba(255, 255, 255, 0.35);
+      margin-bottom: 2px;
+    }
+
+    .mock-header-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: #fff;
+    }
+
+    .mock-body {
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .mock-row {
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 8px;
+      padding: 10px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .mock-name {
+      font-size: 13px;
+      color: rgba(255, 255, 255, 0.7);
+      font-weight: 500;
+    }
+
+    .mock-amount {
+      font-size: 13px;
+      color: rgba(255, 255, 255, 0.5);
+    }
+
+    .mock-status {
+      font-size: 10px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 9999px;
+    }
+
+    .mock-status.paid {
+      background: rgba(27, 166, 115, 0.15);
+      color: #1ba673;
+    }
+
+    .mock-status.pending {
+      background: rgba(255, 85, 48, 0.12);
+      color: var(--coral);
+    }
+
+    .mock-status.sent {
+      background: rgba(20, 86, 240, 0.12);
+      color: var(--cyan);
+    }
+
+    .mock-total {
+      background: rgba(255, 85, 48, 0.1);
+      border: 1px solid rgba(255, 85, 48, 0.2);
+      border-radius: 8px;
+      padding: 10px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 4px;
+    }
+
+    .mock-total-label {
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.5);
+    }
+
+    .mock-total-amount {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--coral);
+    }
+
+    /* ============================================================
+     SLIDE 8 — BUSINESS MODEL
+  ============================================================ */
+    .s8 {
+      background: var(--canvas);
+      display: flex;
+      flex-direction: column;
+      padding: 44px 64px;
+    }
+
+    .pricing-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+      margin-top: 28px;
+      flex: 1;
+    }
+
+    .price-card {
+      border: 1px solid var(--hairline);
+      border-radius: 12px;
+      padding: 24px 20px;
+      display: flex;
+      flex-direction: column;
+      background: var(--surface);
+    }
+
+    .price-card.featured {
+      background: var(--primary);
+      border-color: var(--primary);
+    }
+
+    .price-tier {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--stone);
+      margin-bottom: 10px;
+    }
+
+    .price-tier.dark {
+      color: rgba(255, 255, 255, 0.4);
+    }
+
+    .price-amount {
+      font-size: 32px;
+      font-weight: 600;
+      color: var(--ink);
+      letter-spacing: -0.8px;
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+
+    .price-amount.dark {
+      color: #fff;
+    }
+
+    .price-period {
+      font-size: 13px;
+      color: var(--stone);
+      margin-bottom: 20px;
+    }
+
+    .price-period.dark {
+      color: rgba(255, 255, 255, 0.35);
+    }
+
+    .price-features {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      flex: 1;
+    }
+
+    .price-feature {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      font-size: 12px;
+      color: var(--slate);
+      line-height: 1.4;
+    }
+
+    .price-feature.dark {
+      color: rgba(255, 255, 255, 0.5);
+    }
+
+    .price-check {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--success-bg);
+      color: var(--success-text);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    .price-check.dark {
+      background: rgba(27, 166, 115, 0.15);
+      color: #1ba673;
+    }
+
+    .price-badge {
+      background: var(--coral);
+      color: #fff;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 9999px;
+      width: fit-content;
+      margin-bottom: 10px;
+    }
+
+    /* ============================================================
+     SLIDE 9 — SCALABILITY
+  ============================================================ */
+    .s9 {
+      background: var(--canvas);
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      height: 100%;
+    }
+
+    .s9-left {
+      background: var(--primary);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 52px 48px;
+      gap: 28px;
+    }
+
+    .s9-right {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 44px 44px;
+      gap: 16px;
+    }
+
+    .stat-item {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+    }
+
+    .stat-item:last-child {
+      border-bottom: none;
+      padding-bottom: 0;
+    }
+
+    .stat-num {
+      font-size: 36px;
+      font-weight: 600;
+      color: var(--coral);
+      letter-spacing: -1px;
+    }
+
+    .stat-label {
+      font-size: 14px;
+      color: rgba(255, 255, 255, 0.45);
+    }
+
+    .roadmap-item {
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+    }
+
+    .roadmap-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--primary);
+      border: 2px solid var(--primary);
+      flex-shrink: 0;
+      margin-top: 5px;
+    }
+
+    .roadmap-dot.done {
+      background: var(--success-text);
+      border-color: var(--success-text);
+    }
+
+    .roadmap-dot.next {
+      background: var(--coral);
+      border-color: var(--coral);
+    }
+
+    .roadmap-dot.future {
+      background: transparent;
+      border-color: var(--stone);
+    }
+
+    .roadmap-text {
+      font-size: 14px;
+      color: var(--ink);
+      font-weight: 500;
+    }
+
+    .roadmap-sub {
+      font-size: 12px;
+      color: var(--slate);
+      line-height: 1.5;
+    }
+
+    /* ============================================================
+     SLIDE 10 — TEAM
+  ============================================================ */
+    .s10 {
+      background: var(--primary);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0;
+      padding: 52px 72px;
+    }
+
+    .s10::before {
+      content: '';
+      position: absolute;
+      width: 400px;
+      height: 400px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(168, 85, 247, 0.1) 0%, transparent 70%);
+      bottom: -100px;
+      right: -100px;
+      pointer-events: none;
+    }
+
+    .s10-heading {
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--stone);
+      margin-bottom: 36px;
+    }
+
+    .team-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+      width: 100%;
+      margin-bottom: 40px;
+    }
+
+    .team-card {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 12px;
+      padding: 24px 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      text-align: center;
+    }
+
+    .team-avatar {
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      font-weight: 600;
+      color: #fff;
+      flex-shrink: 0;
+    }
+
+    .av-coral {
+      background: rgba(255, 85, 48, 0.25);
+      border: 1px solid rgba(255, 85, 48, 0.3);
+      color: var(--coral);
+    }
+
+    .av-blue {
+      background: rgba(20, 86, 240, 0.25);
+      border: 1px solid rgba(20, 86, 240, 0.3);
+      color: var(--cyan);
+    }
+
+    .av-purple {
+      background: rgba(168, 85, 247, 0.25);
+      border: 1px solid rgba(168, 85, 247, 0.3);
+      color: var(--purple);
+    }
+
+    .team-name {
+      font-size: 15px;
+      font-weight: 600;
+      color: #fff;
+    }
+
+    .team-role {
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.4);
+      line-height: 1.4;
+    }
+
+    .s10-bottom {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .s10-url {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--coral);
+      letter-spacing: -0.2px;
+    }
+
+    .s10-divider {
+      width: 1px;
+      height: 16px;
+      background: rgba(255, 255, 255, 0.15);
+    }
+
+    .s10-tag {
+      font-size: 13px;
+      color: rgba(255, 255, 255, 0.35);
+    }
+
+    .s10-tagline {
+      font-size: 22px;
+      font-weight: 600;
+      color: #fff;
+      letter-spacing: -0.5px;
+      text-align: center;
+      margin-bottom: 32px;
+    }
+
+    .s10-tagline span {
+      color: var(--coral);
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="deck-shell">
+    <div class="deck">
+
+      <!-- SLIDE 1: COVER -->
+      <div class="slide s1 active" id="slide-1">
+        <div class="s1-logo">
+          <div class="s1-logo-mark" style="background:none;width:40px;height:40px;padding:0;border-radius:0;">
+            <svg width="40" height="40" viewBox="0 0 429 429" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="214.5" cy="214.5" r="214.5" fill="black" />
+              <path
+                d="M138.963 332V113.818H226.321C242.372 113.818 255.76 116.197 266.484 120.956C277.209 125.714 285.27 132.32 290.668 140.771C296.065 149.152 298.764 158.811 298.764 169.749C298.764 178.271 297.06 185.764 293.651 192.227C290.241 198.619 285.554 203.875 279.588 207.994C273.693 212.043 266.946 214.919 259.347 216.624V218.754C267.656 219.109 275.433 221.453 282.678 225.786C289.993 230.118 295.923 236.19 300.469 244.003C305.014 251.744 307.287 260.977 307.287 271.702C307.287 283.278 304.411 293.612 298.658 302.703C292.976 311.723 284.56 318.861 273.409 324.116C262.259 329.372 248.516 332 232.18 332H138.963ZM185.092 294.287H222.699C235.554 294.287 244.929 291.837 250.824 286.936C256.719 281.964 259.666 275.359 259.666 267.121C259.666 261.084 258.21 255.757 255.298 251.141C252.386 246.524 248.232 242.902 242.834 240.274C237.507 237.646 231.151 236.332 223.764 236.332H185.092V294.287ZM185.092 205.118H219.29C225.611 205.118 231.222 204.017 236.122 201.815C241.094 199.543 245 196.347 247.841 192.227C250.753 188.108 252.209 183.172 252.209 177.419C252.209 169.536 249.403 163.179 243.793 158.349C238.253 153.52 230.369 151.105 220.142 151.105H185.092V205.118Z"
+                fill="white" />
+            </svg>
+          </div>
+          <span class="s1-logo-text">BayarLah</span>
+        </div>
+        <div class="s1-hero">Split now,<br><span>chase less</span> later.</div>
+        <div class="s1-sub">The WhatsApp-native collection assistant for Malaysian group expenses.</div>
+        <div class="s1-badges">
+          <div class="badge-pill coral">Fintech Track</div>
+          <div class="badge-pill">Bank Islam × UMPSA 2026</div>
+          <div class="badge-pill">Team Al-Gaib</div>
+        </div>
+      </div>
+
+      <!-- SLIDE 2: PROBLEM -->
+      <div class="slide s2" id="slide-2">
+        <div class="s2-left">
+          <div class="s2-eyebrow">The Problem</div>
+          <div class="s2-heading">Collecting money from friends is painful.</div>
+          <div class="s2-body">Malaysians have no polite, simple way to collect shared expenses. The tools that exist
+            were
+            not built for how we actually communicate.</div>
+        </div>
+        <div class="s2-right">
+          <div class="pain-card">
+            <div class="pain-icon red">😬</div>
+            <div>
+              <div class="pain-title">The awkward reminder</div>
+              <div class="pain-desc">Asking a friend for money — even RM15 — damages relationships. Most people just
+                absorb the loss.</div>
+            </div>
+          </div>
+          <div class="pain-card">
+            <div class="pain-icon amber">📱</div>
+            <div>
+              <div class="pain-title">WhatsApp chaos</div>
+              <div class="pain-desc">Payment proofs buried in group chats. No one knows who has paid. The collector has
+                to
+                count manually.</div>
+            </div>
+          </div>
+          <div class="pain-card">
+            <div class="pain-icon blue">🌍</div>
+            <div>
+              <div class="pain-title">Built for the West</div>
+              <div class="pain-desc">Splitwise and Venmo do not speak DuitNow, WhatsApp, or Malaysian social norms. They
+                are not built for us.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 3: WHY EXISTING SOLUTIONS FAIL -->
+      <div class="slide s3" id="slide-3">
+        <div class="slide-eyebrow">Competitive Gap</div>
+        <div class="slide-heading">Existing tools miss the collector.</div>
+        <div class="competitor-grid">
+          <div class="comp-card">
+            <div class="comp-name">Splitwise</div>
+            <div class="comp-tag miss">Missing</div>
+            <div class="comp-gap">No DuitNow integration. No WhatsApp reminders. Splits expenses but does not help you
+              actually collect the money.</div>
+            <div class="vs-badge">Global</div>
+          </div>
+          <div class="comp-card">
+            <div class="comp-name">Touch 'n Go / Boost</div>
+            <div class="comp-tag miss">Missing</div>
+            <div class="comp-gap">Payment wallets — not collection tools. No group expense tracking, no reminder flow,
+              no
+              proof matching.</div>
+            <div class="vs-badge">MY</div>
+          </div>
+          <div class="comp-card">
+            <div class="comp-name">Excel / WhatsApp</div>
+            <div class="comp-tag miss">Manual</div>
+            <div class="comp-gap">No automation, no reminders, no OCR. The collector does all the admin work themselves
+              —
+              every single time.</div>
+            <div class="vs-badge">Informal</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 4: SOLUTION -->
+      <div class="slide s4" id="slide-4">
+        <div class="s4-tagline">One tool to <span class="hl">collect, remind,</span><br>and confirm payment.</div>
+        <div class="s4-sub">BayarLah is the WhatsApp-native collection assistant for Malaysian group expenses. No
+          wallet.
+          No heavy compliance. Just the workflow.</div>
+        <div class="feature-row">
+          <div class="feat-card">
+            <div class="feat-icon coral">🧾</div>
+            <div class="feat-title">OCR Receipt Split</div>
+            <div class="feat-desc">Scan a receipt, review parsed items, then split by person with the collector's
+              DuitNow
+              QR attached.
+            </div>
+          </div>
+          <div class="feat-card">
+            <div class="feat-icon blue">💬</div>
+            <div class="feat-title">WhatsApp Reminders</div>
+            <div class="feat-desc">Send polite, pre-written reminder messages via WhatsApp without rewriting them each
+              time.</div>
+          </div>
+          <div class="feat-card">
+            <div class="feat-icon purple">🤖</div>
+            <div class="feat-title">OCR Proof Matching</div>
+            <div class="feat-desc">OCR reads payment screenshots and matching rules auto-confirm clear payments or queue
+              review.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 5: HOW IT WORKS -->
+      <div class="slide s5" id="slide-5">
+        <div class="slide-eyebrow">Collector Flow</div>
+        <div class="slide-heading">From dinner to done in five steps.</div>
+        <div class="flow-row">
+          <div class="flow-step">
+            <div class="flow-num">1</div>
+            <div class="flow-label">Create expense</div>
+            <div class="flow-sub">Add friends, enter total, scan or manually split</div>
+          </div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-step">
+            <div class="flow-num">2</div>
+            <div class="flow-label">Dashboard</div>
+            <div class="flow-sub">See who owes what. DuitNow details are ready for each reminder.</div>
+          </div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-step">
+            <div class="flow-num">3</div>
+            <div class="flow-label">Send reminder</div>
+            <div class="flow-sub">One tap sends a WhatsApp nudge with amount and QR link</div>
+          </div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-step">
+            <div class="flow-num">4</div>
+            <div class="flow-label">Receive proof</div>
+            <div class="flow-sub">Friend sends screenshot. OCR reads and verifies key payment details.</div>
+          </div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-step">
+            <div class="flow-num">5</div>
+            <div class="flow-label">Mark paid</div>
+            <div class="flow-sub">Auto-mark if confident. Manual review if not.</div>
+          </div>
+        </div>
+        <div class="flow-note">
+          <div class="flow-note-badge">Key insight</div>
+          <div class="flow-note-text">BayarLah does not move money. It eliminates the admin work around money — which is
+            where all the friction actually lives.</div>
+        </div>
+      </div>
+
+      <!-- SLIDE 6: TECH STACK -->
+      <div class="slide s6" id="slide-6">
+        <div class="s6-left">
+          <div class="slide-eyebrow">Architecture</div>
+          <div class="slide-heading" style="font-size:32px; margin-bottom:16px;">Built to be production-ready from day
+            one.</div>
+          <div class="arch-note">
+            <strong>No payment rails = no heavy compliance.</strong> BayarLah is a workflow layer over DuitNow — users
+            transfer outside the app, we just track and verify. This lets us ship fast, iterate, and scale without a
+            payment license.
+          </div>
+          <div class="arch-note" style="margin-top: 12px;">
+            <strong>AI is used where it creates real value:</strong> Gemini-assisted receipt parsing and OCR-based proof
+            matching — two
+            tasks that are genuinely tedious for humans to do manually.
+          </div>
+        </div>
+        <div class="s6-right">
+          <div class="tech-layer">
+            <div class="tech-layer-label">Frontend</div>
+            <div class="tech-pills">
+              <div class="tech-pill coral">Next.js 15</div>
+              <div class="tech-pill coral">TypeScript</div>
+              <div class="tech-pill">Tailwind CSS</div>
+              <div class="tech-pill">Custom UI</div>
+            </div>
+          </div>
+          <div class="tech-layer">
+            <div class="tech-layer-label">Auth & Backend</div>
+            <div class="tech-pills">
+              <div class="tech-pill blue">Clerk</div>
+              <div class="tech-pill blue">Supabase</div>
+              <div class="tech-pill blue">Prisma</div>
+              <div class="tech-pill">PostgreSQL</div>
+            </div>
+          </div>
+          <div class="tech-layer">
+            <div class="tech-layer-label">AI & Integrations</div>
+            <div class="tech-pills">
+              <div class="tech-pill coral">OCR.space</div>
+              <div class="tech-pill coral">Gemini</div>
+              <div class="tech-pill coral">OpenWA</div>
+              <div class="tech-pill">DuitNow QR</div>
+            </div>
+          </div>
+          <div class="tech-layer">
+            <div class="tech-layer-label">Deployment</div>
+            <div class="tech-pills">
+              <div class="tech-pill blue">Vercel</div>
+              <div class="tech-pill">Cloudflare</div>
+              <div class="tech-pill">Docker</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 7: DEMO PREVIEW -->
+      <div class="slide s7" id="slide-7">
+        <div class="s7-left">
+          <div class="s7-heading">Let us show you<br><span>the real thing.</span></div>
+          <div class="s7-body">Live at bayarlah.pembasmikuman.my — a fully deployed, working product.</div>
+          <div class="demo-steps">
+            <div class="demo-step">
+              <div class="num">1</div>Create profile + DuitNow setup
+            </div>
+            <div class="demo-step">
+              <div class="num">2</div>Add friends, record a shared meal
+            </div>
+            <div class="demo-step">
+              <div class="num">3</div>View dashboard — who owes what
+            </div>
+            <div class="demo-step">
+              <div class="num">4</div>Send WhatsApp reminder in one tap
+            </div>
+            <div class="demo-step">
+              <div class="num">5</div>Upload payment proof → OCR matches → mark paid
+            </div>
+          </div>
+        </div>
+        <div class="s7-mockup">
+          <div class="mock-header">
+            <div class="mock-header-label">Dinner at Jalan Alor</div>
+            <div class="mock-header-title">RM 84.50</div>
+          </div>
+          <div class="mock-body">
+            <div class="mock-row">
+              <div>
+                <div class="mock-name">Alya</div>
+                <div class="mock-amount">RM 28.40</div>
+              </div>
+              <div class="mock-status paid">Paid</div>
+            </div>
+            <div class="mock-row">
+              <div>
+                <div class="mock-name">Ben</div>
+                <div class="mock-amount">RM 31.90</div>
+              </div>
+              <div class="mock-status sent">Reminded</div>
+            </div>
+            <div class="mock-row">
+              <div>
+                <div class="mock-name">Kai</div>
+                <div class="mock-amount">RM 24.20</div>
+              </div>
+              <div class="mock-status pending">Pending</div>
+            </div>
+            <div class="mock-total">
+              <div class="mock-total-label">Still owed</div>
+              <div class="mock-total-amount">RM 56.10</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 8: BUSINESS MODEL -->
+      <div class="slide s8" id="slide-8">
+        <div class="slide-eyebrow">Business Model</div>
+        <div class="slide-heading" style="font-size:32px; margin-bottom:0;">Planned path: Freemium → Pro → Group.</div>
+        <div class="pricing-grid">
+          <div class="price-card">
+            <div class="price-tier">Free</div>
+            <div class="price-amount">RM 0</div>
+            <div class="price-period">forever</div>
+            <div class="price-features">
+              <div class="price-feature">
+                <div class="price-check">✓</div><span>Track expenses &amp; friends</span>
+              </div>
+              <div class="price-feature">
+                <div class="price-check">✓</div><span>Manual splits</span>
+              </div>
+              <div class="price-feature">
+                <div class="price-check">✓</div><span>Receipt OCR scans</span>
+              </div>
+              <div class="price-feature">
+                <div class="price-check">✓</div><span>WhatsApp reminder scheduling</span>
+              </div>
+            </div>
+          </div>
+          <div class="price-card featured">
+            <div class="price-badge">Most popular</div>
+            <div class="price-tier dark">Pro Collector</div>
+            <div class="price-amount dark">RM 8–15</div>
+            <div class="price-period dark">per month</div>
+            <div class="price-features">
+              <div class="price-feature dark">
+                <div class="price-check dark">✓</div><span>Unlimited expenses</span>
+              </div>
+              <div class="price-feature dark">
+                <div class="price-check dark">✓</div><span>Higher OCR + proof matching usage</span>
+              </div>
+              <div class="price-feature dark">
+                <div class="price-check dark">✓</div><span>Automated reminders</span>
+              </div>
+              <div class="price-feature dark">
+                <div class="price-check dark">✓</div><span>Collection history and insights</span>
+              </div>
+            </div>
+          </div>
+          <div class="price-card">
+            <div class="price-tier">Group / Club</div>
+            <div class="price-amount">RM 29–99</div>
+            <div class="price-period">per month per group</div>
+            <div class="price-features">
+              <div class="price-feature">
+                <div class="price-check">✓</div><span>Shared dashboard concept</span>
+              </div>
+              <div class="price-feature">
+                <div class="price-check">✓</div><span>Recurring collections concept</span>
+              </div>
+              <div class="price-feature">
+                <div class="price-check">✓</div><span>Group reminder workflows</span>
+              </div>
+              <div class="price-feature">
+                <div class="price-check">✓</div><span>Futsal groups, condos, clubs</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 9: SCALABILITY -->
+      <div class="slide s9" id="slide-9">
+        <div class="s9-left">
+          <div class="slide-eyebrow" style="color:rgba(255,255,255,0.35);">Market Opportunity</div>
+          <div class="slide-heading" style="font-size:32px;color:#fff;margin-bottom:0;">The problem is everywhere in
+            Malaysia.</div>
+          <div class="stat-item">
+            <div class="stat-num">33M+</div>
+            <div class="stat-label">Malaysia-sized consumer opportunity</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-num">~90%</div>
+            <div class="stat-label">WhatsApp is the everyday collection channel</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-num">Local</div>
+            <div class="stat-label">DuitNow + WhatsApp workflow focus</div>
+          </div>
+        </div>
+        <div class="s9-right">
+          <div class="slide-eyebrow">Roadmap</div>
+          <div style="display:flex;flex-direction:column;gap:16px;margin-top:8px;">
+            <div class="roadmap-item">
+              <div class="roadmap-dot done"></div>
+              <div>
+                <div class="roadmap-text">Working prototype — deployed live</div>
+                <div class="roadmap-sub">Full collector flow, OCR, WhatsApp, DuitNow</div>
+              </div>
+            </div>
+            <div class="roadmap-item">
+              <div class="roadmap-dot next"></div>
+              <div>
+                <div class="roadmap-text">Beta launch — real user feedback</div>
+                <div class="roadmap-sub">Target: class reps, trip organisers, futsal admins</div>
+              </div>
+            </div>
+            <div class="roadmap-item">
+              <div class="roadmap-dot future"></div>
+              <div>
+                <div class="roadmap-text">Pro tier monetisation</div>
+                <div class="roadmap-sub">Usage tiers for OCR, reminders, proof matching</div>
+              </div>
+            </div>
+            <div class="roadmap-item">
+              <div class="roadmap-dot future"></div>
+              <div>
+                <div class="roadmap-text">Group / Club plan</div>
+                <div class="roadmap-sub">Multi-admin, recurring dues, broadcast reminders</div>
+              </div>
+            </div>
+            <div class="roadmap-item">
+              <div class="roadmap-dot future"></div>
+              <div>
+                <div class="roadmap-text">Merchant partnerships & white-label</div>
+                <div class="roadmap-sub">Bill splitting at F&B, tuition centres, events</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SLIDE 10: TEAM -->
+      <div class="slide s10" id="slide-10">
+        <div class="s10-heading">The Team</div>
+        <div class="s10-tagline">Built by Malaysians,<br>for <span>Malaysians.</span></div>
+        <div class="team-grid">
+          <div class="team-card">
+            <div class="team-avatar av-coral">S</div>
+            <div class="team-name">Shazwan</div>
+            <div class="team-role">Architecture & System Design<br>Full-stack, AI integration</div>
+          </div>
+          <div class="team-card">
+            <div class="team-avatar av-blue">A</div>
+            <div class="team-name">Azfar</div>
+            <div class="team-role">Frontend Development<br>UI/UX implementation</div>
+          </div>
+          <div class="team-card">
+            <div class="team-avatar av-purple">L</div>
+            <div class="team-name">Lutfil</div>
+            <div class="team-role">Backend Development<br>API & database layer</div>
+          </div>
+        </div>
+        <div class="s10-bottom">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <svg width="32" height="32" viewBox="0 0 429 429" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="214.5" cy="214.5" r="214.5" fill="black" />
+              <path
+                d="M138.963 332V113.818H226.321C242.372 113.818 255.76 116.197 266.484 120.956C277.209 125.714 285.27 132.32 290.668 140.771C296.065 149.152 298.764 158.811 298.764 169.749C298.764 178.271 297.06 185.764 293.651 192.227C290.241 198.619 285.554 203.875 279.588 207.994C273.693 212.043 266.946 214.919 259.347 216.624V218.754C267.656 219.109 275.433 221.453 282.678 225.786C289.993 230.118 295.923 236.19 300.469 244.003C305.014 251.744 307.287 260.977 307.287 271.702C307.287 283.278 304.411 293.612 298.658 302.703C292.976 311.723 284.56 318.861 273.409 324.116C262.259 329.372 248.516 332 232.18 332H138.963ZM185.092 294.287H222.699C235.554 294.287 244.929 291.837 250.824 286.936C256.719 281.964 259.666 275.359 259.666 267.121C259.666 261.084 258.21 255.757 255.298 251.141C252.386 246.524 248.232 242.902 242.834 240.274C237.507 237.646 231.151 236.332 223.764 236.332H185.092V294.287ZM185.092 205.118H219.29C225.611 205.118 231.222 204.017 236.122 201.815C241.094 199.543 245 196.347 247.841 192.227C250.753 188.108 252.209 183.172 252.209 177.419C252.209 169.536 249.403 163.179 243.793 158.349C238.253 153.52 230.369 151.105 220.142 151.105H185.092V205.118Z"
+                fill="white" />
+            </svg>
+            <div class="s10-url">
+              <a href="https://bayarlah.pembasmikuman.my">
+                bayarlah.pembasmikuman.my
+              </a>
+            </div>
+            <div class="s10-divider"></div>
+            <div class="s10-tag">Live demo ready</div>
+            <div class="s10-divider"></div>
+            <div class="s10-tag">IIUM</div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+
+  <!-- CONTROLS -->
+  <div class="nav">
+    <button class="nav-btn" id="btn-prev" onclick="changeSlide(-1)" disabled>← Prev</button>
+    <span class="slide-counter" id="counter">1 / 10</span>
+    <button class="nav-btn" id="btn-fullscreen" onclick="toggleFullscreen()"
+      title="Press F for fullscreen">Fullscreen</button>
+    <button class="nav-btn" id="btn-next" onclick="changeSlide(1)">Next →</button>
+  </div>
+  <div class="dots" id="dots"></div>
+
+  <script>
+    let current = 1;
+    const total = 10;
+    const deckWidth = 960;
+    const deckHeight = 540;
+    const dots = document.getElementById('dots');
+    const deckShell = document.querySelector('.deck-shell');
+    const nav = document.querySelector('.nav');
+    const dotsBar = document.querySelector('.dots');
+    const fullscreenButton = document.getElementById('btn-fullscreen');
+
+    for (let i = 1; i <= total; i++) {
+      const d = document.createElement('div');
+      d.className = 'dot' + (i === 1 ? ' active' : '');
+      d.onclick = () => goTo(i);
+      dots.appendChild(d);
+    }
+
+    function goTo(n) {
+      document.getElementById('slide-' + current).classList.remove('active');
+      document.querySelectorAll('.dot')[current - 1].classList.remove('active');
+      current = n;
+      document.getElementById('slide-' + current).classList.add('active');
+      document.querySelectorAll('.dot')[current - 1].classList.add('active');
+      document.getElementById('counter').textContent = current + ' / ' + total;
+      document.getElementById('btn-prev').disabled = current === 1;
+      document.getElementById('btn-next').disabled = current === total;
+    }
+
+    function changeSlide(dir) {
+      const next = current + dir;
+      if (next < 1 || next > total) return;
+      goTo(next);
+    }
+
+    async function toggleFullscreen() {
+      if (document.fullscreenElement) {
+        await document.exitFullscreen();
+        return;
+      }
+
+      await deckShell.requestFullscreen();
+    }
+
+    function updateDeckScale() {
+      const isFullscreen = document.fullscreenElement === deckShell;
+      const horizontalPadding = isFullscreen ? 0 : 32;
+      const verticalPadding = isFullscreen ? 0 : 32;
+      const controlsHeight = isFullscreen ?
+        0 :
+        nav.offsetHeight + dotsBar.offsetHeight + 44;
+      const availableWidth = window.innerWidth - horizontalPadding;
+      const availableHeight = window.innerHeight - controlsHeight - verticalPadding;
+      const scale = Math.max(
+        0.2,
+        Math.min(availableWidth / deckWidth, availableHeight / deckHeight)
+      );
+
+      document.body.style.setProperty('--deck-scale', scale.toFixed(4));
+    }
+
+    function syncPresentationMode() {
+      const isFullscreen = document.fullscreenElement === deckShell;
+      document.body.classList.toggle('presentation-mode', isFullscreen);
+      fullscreenButton.textContent = isFullscreen ? 'Exit fullscreen' : 'Fullscreen';
+      updateDeckScale();
+    }
+
+    document.addEventListener('fullscreenchange', syncPresentationMode);
+    window.addEventListener('resize', updateDeckScale);
+    updateDeckScale();
+
+    document.addEventListener('keydown', e => {
+      if (e.key === 'ArrowRight' || e.key === 'ArrowDown') changeSlide(1);
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') changeSlide(-1);
+      if (e.key.toLowerCase() === 'f') toggleFullscreen();
+    });
+  </script>
+</body>
+
+</html>
