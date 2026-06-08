@@ -193,9 +193,10 @@ function extractTngRecipientText(lines: string[]) {
       continue;
     }
 
-    const nextLine = lines[index + 1];
-    if (nextLine && !looksLikeTngLabelOnly(nextLine)) {
-      values.push(nextLine);
+    let nextIndex = index + 1;
+    while (nextIndex < lines.length && !looksLikeTngStackedValueNoise(lines[nextIndex])) {
+      values.push(lines[nextIndex]);
+      nextIndex += 1;
     }
   }
 

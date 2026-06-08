@@ -12,7 +12,125 @@ import {
   isValidMalaysianMobilePhone,
   normalizeMalaysianMobilePhone,
 } from "@/lib/friends";
+import { extractImageTextWithOcrSpace } from "@/lib/ocr-space";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+
+const DEFAULT_GEMINI_MODEL = "gemini-2.5-flash";
+
+type GeminiResponse = {
+  candidates?: {
+    content?: {
+      parts?: { text?: string }[];
+    };
+  }[];
+  error?: { message?: string };
+};
+
+export type ParseDuitNowNameState = { name?: string; error?: string };
+
+export async function parseDuitNowRecipientName(
+  _prevState: ParseDuitNowNameState,
+  formData: FormData
+): Promise<ParseDuitNowNameState> {
+  try {
+    const file = getUploadedFile(formData.get("duitNowQr"));
+    if (!file) return { error: "No image provided." };
+
+    if (!file.type.startsWith("image/")) {
+      return { error: "Please upload an image file." };
+    }
+    if (file.size > MAX_IMAGE_SIZE_BYTES) {
+      return { error: "Image must be smaller than 5 MB." };
+    }
+
+    const bytes = Buffer.from(await file.arrayBuffer());
+    const ocrText = await extractImageTextWithOcrSpace({
+      file,
+      bytes,
+      fallbackFileName: "duitnow-qr.jpg",
+      failureMessage: "OCR could not read the QR image.",
+      emptyTextMessage: "No text found on the QR image.",
+    });
+
+    const name = await extractRecipientNameWithGemini(ocrText);
+    if (!name) return { error: "Could not read the name — enter it manually." };
+
+    return { name };
+  } catch (error) {
+    return {
+      error:
+        error instanceof Error
+          ? error.message
+          : "Could not read the name — enter it manually.",
+    };
+  }
+}
+
+async function extractRecipientNameWithGemini(ocrText: string): Promise<string> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) throw new Error("Missing GEMINI_API_KEY.");
+
+  const model = (process.env.GEMINI_MODEL || DEFAULT_GEMINI_MODEL).replace(
+    /^models\//,
+    ""
+  );
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
+
+  const prompt = [
+    "This is OCR text extracted from a Malaysian DuitNow QR image.",
+    "The image shows a payment QR code with the account holder's name printed above it.",
+    "Return JSON with a single field: { \"recipientName\": string }.",
+    "recipientName should be the account/recipient holder name shown on the image.",
+    "Return an empty string if you cannot find a clear name.",
+    "Do not include any other text, only the JSON.",
+    "OCR text:",
+    ocrText,
+  ].join("\n");
+
+  const body = {
+    contents: [{ role: "user", parts: [{ text: prompt }] }],
+    generationConfig: {
+      responseMimeType: "application/json",
+      responseSchema: {
+        type: "object",
+        properties: {
+          recipientName: { type: "string" },
+        },
+        required: ["recipientName"],
+      },
+      thinkingConfig: { thinkingLevel: "MINIMAL" },
+    },
+  };
+
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-goog-api-key": apiKey,
+    },
+    body: JSON.stringify(body),
+  });
+
+  const json = (await response.json().catch(() => null)) as GeminiResponse | null;
+
+  if (!response.ok) {
+    throw new Error(json?.error?.message || "Gemini request failed.");
+  }
+
+  const text = json?.candidates?.[0]?.content?.parts
+    ?.map((p) => p.text ?? "")
+    .join("")
+    .trim();
+
+  if (!text) return "";
+
+  try {
+    const parsed = JSON.parse(text) as { recipientName?: string };
+    return typeof parsed.recipientName === "string" ? parsed.recipientName.trim() : "";
+  } catch {
+    return "";
+  }
+}
 
 const DUITNOW_QRS_BUCKET = "duitnow-qrs";
 const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024;

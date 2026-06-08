@@ -8,6 +8,7 @@ import StatusToast from "@/components/StatusToast";
 import SubmitButton from "@/components/SubmitButton";
 import BrandLogo from "@/components/BrandLogo";
 import DuitNowIdFields from "./DuitNowIdFields";
+import DuitNowQrField from "./DuitNowQrField";
 
 export const dynamic = "force-dynamic";
 
@@ -116,23 +117,6 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
                 defaultType={user.duitNowIdType}
                 defaultValue={user.duitNowIdValue}
               />
-
-              <label className="flex flex-col gap-2">
-                <span className="text-sm font-medium">
-                  DuitNow recipient name
-                </span>
-                <input
-                  name="duitNowRecipientName"
-                  defaultValue={user.duitNowRecipientName ?? ""}
-                  required
-                  placeholder="Name shown on bank receipts"
-                  className="h-11 rounded-lg border border-[#e5e7eb] bg-white px-4 text-base outline-none placeholder:text-[#8e8e93] focus:border-2 focus:border-[#1d4ed8]"
-                />
-                <span className="text-sm leading-5 text-[#5f5f5f]">
-                  Enter the exact name your bank shows after the QR is scanned.
-                  We use it to verify payment receipts.
-                </span>
-              </label>
             </div>
           </section>
 
@@ -147,40 +131,10 @@ export default async function ProfilePage({ searchParams }: ProfilePageProps) {
             </div>
 
             <div className="mt-5 grid gap-5 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
-              <div className="min-w-0">
-                <label className="flex flex-col gap-2">
-                  <span className="text-sm font-medium">DuitNow QR image</span>
-                  <input
-                    name="duitNowQr"
-                    type="file"
-                    accept="image/*"
-                    required={!user.duitNowQrUrl}
-                    className="block min-h-11 cursor-pointer rounded-lg border border-[#e5e7eb] bg-white text-sm text-[#5f5f5f] file:mr-3 file:min-h-11 file:cursor-pointer file:rounded-full file:border-0 file:bg-[#0a0a0a] file:px-5 file:text-sm file:font-semibold file:text-white"
-                  />
-                </label>
-                <p className="mt-2 text-sm leading-5 text-[#5f5f5f]">
-                  Upload a clear image of your QR. A new image will replace the
-                  one currently saved.
-                </p>
-              </div>
-
-              {user.duitNowQrUrl ? (
-                <div className="flex items-center gap-4 rounded-xl bg-[#f7f8fa] p-3 sm:w-36 sm:flex-col sm:items-start">
-                  {/* User-upload hosts vary by environment, so render the stored URL directly. */}
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={user.duitNowQrUrl}
-                    alt="Current DuitNow QR"
-                    className="h-20 w-20 shrink-0 rounded-lg border border-[#e5e7eb] bg-white object-cover sm:h-28 sm:w-28"
-                  />
-                  <div>
-                    <p className="text-sm font-semibold">Current QR</p>
-                    <p className="mt-1 text-xs leading-4 text-[#5f5f5f]">
-                      Saved and ready to use
-                    </p>
-                  </div>
-                </div>
-              ) : null}
+              <DuitNowQrField
+                defaultName={user.duitNowRecipientName ?? ""}
+                defaultQrUrl={user.duitNowQrUrl}
+              />
             </div>
           </section>
 
