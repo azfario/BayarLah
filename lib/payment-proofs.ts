@@ -74,14 +74,18 @@ export function parseBankReceiptOcrText(ocrText: string): BankReceiptParseResult
 
 function parseTngReceipt(rawOcrText: string, lines: string[]): BankReceiptParseResult {
   const coreLines = trimTngFooter(lines);
+  const stackedFields = extractStackedTngFields(coreLines);
   const amountCents = extractTngAmountCents(coreLines);
-  const recipientText = extractTngRecipientText(coreLines);
-  const paymentCode = extractLabeledPaymentCode(coreLines);
+  const recipientText =
+    extractTngRecipientText(coreLines) || stackedFields.recipientText;
+  const paymentCode =
+    extractLabeledPaymentCode(coreLines) || stackedFields.paymentCode;
   const transactionReference = removePaymentCodeReference(
     extractLabeledValue(coreLines, TNG_REFERENCE_LABEL_PATTERN),
     paymentCode
   );
-  const timestampText = extractTngTimestampText(coreLines);
+  const timestampText =
+    extractTngTimestampText(coreLines) || stackedFields.timestampText;
   const confidenceNotes = getConfidenceNotes({
     rawOcrText,
     amountCents,
@@ -198,6 +202,42 @@ function extractTngRecipientText(lines: string[]) {
   return [...new Set(values)].join(" ");
 }
 
+function extractStackedTngFields(lines: string[]) {
+  const emptyFields = { recipientText: "", paymentCode: "", timestampText: "" };
+  const timestampLabelIndex = lines.findIndex((line) =>
+    TNG_TIMESTAMP_LABEL_PATTERN.test(line)
+  );
+  if (timestampLabelIndex === -1) return emptyFields;
+
+  const labelLines = lines.slice(0, timestampLabelIndex + 1);
+  if (
+    !labelLines.some((line) => /\breceiver\b/i.test(line)) ||
+    !labelLines.some((line) => /\bremark\b/i.test(line))
+  ) {
+    return emptyFields;
+  }
+
+  const valueLines = lines.slice(timestampLabelIndex + 1);
+  const timestampIndex = valueLines.findIndex((line) => DATE_PATTERN.test(line));
+  if (timestampIndex === -1) return emptyFields;
+
+  const beforeTimestamp = valueLines.slice(0, timestampIndex);
+  const paymentCodeIndex = findLastIndex(beforeTimestamp, (line) =>
+    Boolean(extractPaymentCode(line))
+  );
+  if (paymentCodeIndex === -1) return emptyFields;
+
+  const recipientLines = beforeTimestamp
+    .slice(0, paymentCodeIndex)
+    .filter((line) => !looksLikeTngStackedValueNoise(line));
+
+  return {
+    recipientText: recipientLines.join(" "),
+    paymentCode: extractPaymentCode(beforeTimestamp[paymentCodeIndex]),
+    timestampText: valueLines[timestampIndex],
+  };
+}
+
 function extractTngTimestampText(lines: string[]) {
   const labeledTimestamp = extractLabeledValue(lines, TNG_TIMESTAMP_LABEL_PATTERN);
   if (labeledTimestamp && DATE_PATTERN.test(labeledTimestamp)) return labeledTimestamp;
@@ -256,6 +296,23 @@ function looksLikeTngLabelOnly(line: string) {
     TNG_FOOTER_PATTERN.test(line) ||
     /^-?\s*RM\s*[0-9]/i.test(line)
   );
+}
+
+function looksLikeTngStackedValueNoise(line: string) {
+  return (
+    looksLikeTngLabelOnly(line) ||
+    DATE_PATTERN.test(line) ||
+    Boolean(extractPaymentCode(line)) ||
+    Boolean(getLineAmountCents(line))
+  );
+}
+
+function findLastIndex<T>(values: T[], predicate: (value: T) => boolean) {
+  for (let index = values.length - 1; index >= 0; index -= 1) {
+    if (predicate(values[index])) return index;
+  }
+
+  return -1;
 }
 
 function getConfidenceNotes({

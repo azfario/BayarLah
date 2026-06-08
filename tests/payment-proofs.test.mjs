@@ -116,6 +116,34 @@ Date & Time
   assert.deepEqual(parsed.confidenceNotes, []);
 });
 
+test("extracts TNG stacked labels before receipt values", () => {
+  const parsed = parseBankReceiptOcrText(`
+21:474
+•ll 4G
+RM 0.50
+Transferred
+Receiver
+Remark
+Date & Time
+MUTSANNA
+BIN ZULKEFLE
+28273625
+07/06/2026 21:47:32
+Panasonic
+Beat the Blaze,
+Save More Today
+eWallet Rebate
+Done
+  `);
+
+  assert.equal(parsed.provider, "TNG_EWALLET");
+  assert.equal(parsed.amountCents, 50);
+  assert.equal(parsed.recipientText, "MUTSANNA BIN ZULKEFLE");
+  assert.equal(parsed.paymentCode, "28273625");
+  assert.equal(parsed.timestampText, "07/06/2026 21:47:32");
+  assert.deepEqual(parsed.confidenceNotes, []);
+});
+
 test("keeps supporting previously issued BL payment codes", () => {
   const parsed = parseBankReceiptOcrText(`
 Maybank2u
