@@ -154,7 +154,7 @@ Recipient Reference: BL48273195
 Transaction Date: 31/05/2026 09:41 PM
   `);
 
-  assert.equal(parsed.paymentCode, "BL48273195");
+  assert.equal(parsed.paymentCode, "48273195");
 });
 
 test("does not treat an unrelated eight-digit number as a payment code", () => {

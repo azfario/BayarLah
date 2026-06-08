@@ -20,6 +20,7 @@ import {
   getWhatsappMessageId,
 } from "../../lib/whatsapp-inbound.js";
 import {
+  buildPaymentCodeMessage,
   buildWhatsAppReminderMessage,
   getNextReminderAtFromCadence,
   getRetryReminderAt,
@@ -499,10 +500,10 @@ async function sendReminder(share: DueShare, botSession: ActiveBotSession) {
     collectorName: collector.fullName ?? "Your friend",
     amountLabel: formatMoney(share.owedAmount),
     expenseDescription: share.expense.description,
-    paymentCode,
     duitNowIdType: collector.duitNowIdType,
     duitNowIdValue: collector.duitNowIdValue,
   });
+  const paymentCodeMessage = buildPaymentCodeMessage(paymentCode);
   const whatsappChatId = toOpenWaChatId(share.friend.phone);
 
   const attempt = await prisma.whatsappReminderAttempt.create({
@@ -532,6 +533,11 @@ async function sendReminder(share: DueShare, botSession: ActiveBotSession) {
       chatId: whatsappChatId,
       imageUrl: qrUrl,
       caption: messageText,
+    });
+    await sendOpenWaText({
+      sessionId: botSession.sessionId,
+      chatId: whatsappChatId,
+      text: paymentCodeMessage,
     });
     const sentAt = new Date();
     const nextReminderAt = getNextReminderAtFromCadence(

@@ -35,10 +35,9 @@ export function buildWhatsAppReminderMessage({
   collectorName,
   amountLabel,
   expenseDescription,
-  paymentCode,
   duitNowIdType,
   duitNowIdValue,
-}: WhatsAppReminderMessageInput) {
+}: Omit<WhatsAppReminderMessageInput, "paymentCode">) {
   const duitNowLabel = DUITNOW_ID_LABELS[duitNowIdType ?? ""] ?? "ID";
   const duitNowLine = duitNowIdValue
     ? `DuitNow ${duitNowLabel}: ${duitNowIdValue}`
@@ -53,11 +52,12 @@ export function buildWhatsAppReminderMessage({
     "Please pay using the DuitNow QR attached OR send to",
     duitNowLine,
     "",
-    `Enter payment code: **${paymentCode}**`,
-    "in the transfer Reference/Remark field.",
-    "",
     "After paying, send the payment receipt image (no PDF, just screenshot or the receipt image) back to this chat reply.",
   ].join("\n");
+}
+
+export function buildPaymentCodeMessage(paymentCode: string) {
+  return `Payment code: *${paymentCode}*\nEnter this in the transfer Reference/Remark field.`;
 }
 
 export function getNextReminderAtFromCadence(

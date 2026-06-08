@@ -11,7 +11,7 @@ export function generatePaymentCode() {
 export function extractPaymentCode(value: string) {
   const legacyMatch = value.match(LEGACY_PAYMENT_CODE_PATTERN);
   if (legacyMatch) {
-    return `BL${legacyMatch[1].replace(/\D/g, "")}`;
+    return legacyMatch[1].replace(/\D/g, "");
   }
 
   const match = value.match(DIGIT_PAYMENT_CODE_PATTERN);
