@@ -1,8 +1,7 @@
 import Link from "next/link";
 import { Prisma } from "@prisma/client";
-import { UserButton } from "@clerk/nextjs";
-import BrandLogo from "@/components/BrandLogo";
 import { currentUser } from "@clerk/nextjs/server";
+import Header from "@/components/Header";
 import { redirect } from "next/navigation";
 import StatusToast from "@/components/StatusToast";
 import SubmitButton from "@/components/SubmitButton";
@@ -158,38 +157,18 @@ export default async function ExpensesPage({ searchParams }: ExpensesPageProps) 
   const proofImageUrlById = await getPaymentProofImageUrls(pendingProofs);
 
   return (
-    <main className="min-h-screen bg-zinc-50 px-4 py-6 text-zinc-950 sm:py-8">
-      <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
-        <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <BrandLogo href="/dashboard" className="text-sm" />
-            <h1 className="text-2xl font-bold sm:text-3xl">Expenses</h1>
-          </div>
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
-            <Link href="/dashboard" className="text-sm font-medium text-zinc-600 hover:text-zinc-950">
-              Dashboard
-            </Link>
-            <Link href="/friends" className="text-sm font-medium text-zinc-600 hover:text-zinc-950">
-              Friends
-            </Link>
-            <Link
-              href="/expenses/new"
-              className="inline-flex w-full items-center justify-center rounded-md bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800 sm:w-auto"
-            >
-              Record expense
-            </Link>
-            <UserButton />
-          </div>
-        </header>
+    <main className="min-h-screen bg-white px-4 py-5 text-[#0a0a0a] sm:px-6 sm:py-6 lg:px-8">
+      <div className="mx-auto flex w-full max-w-6xl flex-col gap-8">
+        <Header title="Expenses" />
 
         <StatusToast error={params.error} success={params.success} />
 
         {pendingProofs.length > 0 ? (
-          <section className="rounded-lg border border-amber-200 bg-white p-4 shadow-sm sm:p-6">
+          <section className="rounded-2xl border border-[#e5e7eb] bg-[#f7f8fa] p-5 sm:p-6">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <h2 className="text-xl font-semibold">Payment reviews</h2>
-                <p className="text-sm text-zinc-500">
+                <p className="text-sm text-[#5f5f5f]">
                   Confirm only when the receipt recipient and debt look right.
                 </p>
               </div>
@@ -224,10 +203,10 @@ export default async function ExpensesPage({ searchParams }: ExpensesPageProps) 
                 return (
                   <article
                     key={proof.id}
-                    className="rounded-md border border-zinc-200 bg-zinc-50 p-4"
+                    className="rounded-2xl border border-[#e5e7eb] bg-white p-4 sm:p-5"
                   >
-                    <div className="grid gap-4 sm:grid-cols-[140px_1fr]">
-                      <div className="overflow-hidden rounded-md border border-zinc-200 bg-white">
+                    <div className="grid gap-4 md:grid-cols-[140px_1fr]">
+                      <div className="overflow-hidden rounded-xl border border-[#e5e7eb] bg-white">
                         {imageUrl ? (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img
@@ -247,7 +226,7 @@ export default async function ExpensesPage({ searchParams }: ExpensesPageProps) 
                             {proof.debtorFriend?.name ?? "Unknown debtor"}
                           </h3>
                           {proof.debtorFriend ? (
-                            <span className="text-sm text-zinc-500">
+                            <span className="text-sm text-[#5f5f5f]">
                               {proof.debtorFriend.phone}
                             </span>
                           ) : null}
@@ -289,8 +268,8 @@ export default async function ExpensesPage({ searchParams }: ExpensesPageProps) 
                       </div>
                     </div>
 
-                    <div className="mt-4 border-t border-zinc-200 pt-4">
-                      <p className="text-sm font-medium text-zinc-700">
+                    <div className="mt-4 border-t border-[#e5e7eb] pt-4">
+                      <p className="text-sm font-medium text-[#0a0a0a]">
                         Suggested debt
                       </p>
                       {confirmCandidates.length > 0 ? (
@@ -298,13 +277,13 @@ export default async function ExpensesPage({ searchParams }: ExpensesPageProps) 
                           {confirmCandidates.map((share) => (
                             <div
                               key={share.id}
-                              className="flex flex-col gap-3 rounded-md bg-white px-3 py-2 text-sm sm:flex-row sm:items-center sm:justify-between"
+                              className="flex flex-col gap-3 rounded-xl border border-[#e5e7eb] bg-[#f7f8fa] px-3 py-2 text-sm sm:flex-row sm:items-center sm:justify-between"
                             >
                               <div className="min-w-0">
                                 <p className="break-words font-medium">
                                   {share.friend.name} - {formatMoney(share.owedAmount)}
                                 </p>
-                                <p className="break-words text-zinc-500">
+                                <p className="break-words text-[#5f5f5f]">
                                   {share.expense.description}
                                 </p>
                               </div>
@@ -326,7 +305,7 @@ export default async function ExpensesPage({ searchParams }: ExpensesPageProps) 
                           ))}
                         </div>
                       ) : (
-                        <p className="mt-2 rounded-md bg-white px-3 py-2 text-sm text-zinc-500">
+                        <p className="mt-2 rounded-xl border border-[#e5e7eb] bg-[#f7f8fa] px-3 py-2 text-sm text-[#5f5f5f]">
                           No exact unpaid debt candidate. Reject this proof or wait for a clearer receipt.
                         </p>
                       )}
@@ -349,28 +328,28 @@ export default async function ExpensesPage({ searchParams }: ExpensesPageProps) 
           </section>
         ) : null}
 
-        <section className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm sm:p-6">
+        <section className="rounded-2xl border border-[#e5e7eb] bg-white p-5 sm:p-6">
           <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
             <h2 className="text-xl font-semibold">Recent expenses</h2>
-            <span className="text-sm text-zinc-500">
+            <span className="text-sm text-[#5f5f5f]">
               Showing {expenses.length} of {expenseCount}
             </span>
           </div>
 
           {expenses.length > 0 ? (
-            <div className="mt-4 divide-y divide-zinc-100">
+            <div className="mt-4 divide-y divide-[#eaecf0]">
               {expenses.map((expense) => (
                 <article key={expense.id} className="py-4">
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div className="min-w-0">
                       <h3 className="break-words font-semibold">{expense.description}</h3>
-                      <p className="text-sm text-zinc-500">
+                      <p className="text-sm text-[#5f5f5f]">
                         {expense.splitMode === "EQUAL_SPLIT" ? "Equal split" : "Custom amounts"} -{" "}
                         Total paid {formatMoney(expense.totalAmount)}
                       </p>
                     </div>
                     <div className="flex flex-col gap-3 sm:items-end">
-                      <p className="text-sm text-zinc-500 sm:text-right">
+                      <p className="text-sm text-[#5f5f5f] sm:text-right">
                         Your amount {formatMoney(expense.collectorAmount)}
                       </p>
                       <form action={deleteExpense} className="w-full sm:w-auto">
@@ -395,7 +374,7 @@ export default async function ExpensesPage({ searchParams }: ExpensesPageProps) 
                       return (
                         <div
                           key={share.id}
-                          className="flex flex-col gap-3 rounded-md bg-zinc-50 px-3 py-3 text-sm sm:flex-row sm:items-start sm:justify-between sm:py-2"
+                          className="flex flex-col gap-3 rounded-xl bg-[#f7f8fa] px-3 py-3 text-sm sm:flex-row sm:items-start sm:justify-between sm:py-2"
                         >
                           <div className="min-w-0">
                             <div className="flex flex-wrap items-center gap-2">
@@ -406,9 +385,9 @@ export default async function ExpensesPage({ searchParams }: ExpensesPageProps) 
                                 </span>
                               </span>
                               <span
-                                className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                                className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
                                   isPaid
-                                    ? "bg-emerald-100 text-emerald-700"
+                                    ? "bg-[#e8ffea] text-[#1ba673]"
                                     : "bg-amber-100 text-amber-700"
                                 }`}
                               >
@@ -416,7 +395,7 @@ export default async function ExpensesPage({ searchParams }: ExpensesPageProps) 
                               </span>
                             </div>
                             {latestAttempt ? (
-                              <span className="mt-1 block text-xs text-zinc-500">
+                              <span className="mt-1 block text-xs text-[#5f5f5f]">
                                 {getWhatsAppAttemptLabel(latestAttempt)}
                               </span>
                             ) : null}
@@ -426,7 +405,7 @@ export default async function ExpensesPage({ searchParams }: ExpensesPageProps) 
                               <span className="block font-medium">
                                 {formatMoney(share.owedAmount)}
                               </span>
-                              <span className="block text-xs text-zinc-500">
+                              <span className="block text-xs text-[#5f5f5f]">
                                 {paidAt
                                   ? `Paid ${sharePaidDateFormatter.format(paidAt)}`
                                   : getReminderStatusLabel(share)}
@@ -469,15 +448,15 @@ export default async function ExpensesPage({ searchParams }: ExpensesPageProps) 
                   </div>
 
                   {expense.receiptItems.length > 0 ? (
-                    <div className="mt-4 rounded-md border border-emerald-100 bg-emerald-50 p-4">
-                      <div className="flex flex-wrap items-center gap-3 text-sm text-emerald-900">
+                    <div className="mt-4 rounded-2xl border border-[#e5e7eb] bg-[#f7f8fa] p-4">
+                      <div className="flex flex-wrap items-center gap-3 text-sm text-[#0a0a0a]">
                         {expense.receiptMerchantName ? (
                           <span className="font-medium">
                             {expense.receiptMerchantName}
                           </span>
                         ) : null}
                         {expense.receiptDate ? <span>{expense.receiptDate}</span> : null}
-                        <span className="text-emerald-700">
+                        <span className="text-[#5f5f5f]">
                           Receipt items saved. Photo was not stored.
                         </span>
                       </div>
@@ -494,7 +473,7 @@ export default async function ExpensesPage({ searchParams }: ExpensesPageProps) 
                               </span>
                               <span className="shrink-0">{formatMoney(item.amount)}</span>
                             </div>
-                            <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-zinc-500">
+                            <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-[#5f5f5f]">
                               {item.allocations.map((allocation) => (
                                 <span key={allocation.id}>
                                   {allocation.participantType === "COLLECTOR"
@@ -513,13 +492,13 @@ export default async function ExpensesPage({ searchParams }: ExpensesPageProps) 
               ))}
             </div>
           ) : (
-            <div className="mt-4 rounded-md bg-zinc-50 px-4 py-5 text-sm text-zinc-500">
+            <div className="mt-4 rounded-2xl bg-[#f7f8fa] px-4 py-5 text-sm text-[#5f5f5f]">
               <p>Record your first expense to see who owes what.</p>
               <Link
                 href="/expenses/new"
-                className="mt-3 inline-flex items-center justify-center rounded-md bg-emerald-700 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-800"
+                className="mt-3 inline-flex items-center justify-center rounded-full bg-[#0a0a0a] px-5 py-2.5 text-sm font-semibold text-white"
               >
-                Record expense
+                Create expense
               </Link>
             </div>
           )}

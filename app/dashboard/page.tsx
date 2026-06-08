@@ -3,14 +3,13 @@ export const dynamic = "force-dynamic";
 import Link from "next/link";
 import { Prisma } from "@prisma/client";
 import { currentUser } from "@clerk/nextjs/server";
-import { UserButton } from "@clerk/nextjs";
 import { redirect } from "next/navigation";
 import { ensureUserInDB } from "@/lib/actions/user";
 import { prisma } from "@/lib/db";
 import { formatMoney } from "@/lib/money";
 import { isProfileComplete } from "@/lib/profile";
 import { getReminderStatusLabel } from "@/lib/reminders";
-import BrandLogo from "@/components/BrandLogo";
+import Header from "@/components/Header";
 
 type SharePaymentStatus = {
   id: string;
@@ -80,41 +79,10 @@ export default async function DashboardPage() {
   return (
     <main className="min-h-screen bg-white px-4 py-5 text-[#0a0a0a] sm:px-6 sm:py-6 lg:px-8">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-8">
-        <header className="flex flex-col gap-6 border-b border-[#e5e7eb] pb-6 lg:flex-row lg:items-center lg:justify-between">
-          <div className="min-w-0">
-            <BrandLogo href="/dashboard" className="text-sm" />
-            <h1 className="mt-2 text-4xl font-semibold leading-tight tracking-[-0.5px] text-[#0a0a0a] sm:text-5xl">
-              Dashboard
-            </h1>
-            <p className="mt-2 break-all text-sm leading-6 text-[#5f5f5f]">
-              Logged in as {clerkUser.emailAddresses[0]?.emailAddress}
-            </p>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3 sm:flex sm:flex-wrap sm:items-center">
-            <Link
-              href="/expenses/new"
-              className="col-span-2 inline-flex items-center justify-center rounded-full bg-[#0a0a0a] px-6 py-3 text-sm font-semibold text-white sm:col-span-1"
-            >
-              Create expense
-            </Link>
-            <Link
-              href="/friends"
-              className="inline-flex items-center justify-center rounded-full border border-[#0a0a0a] px-5 py-3 text-sm font-semibold text-[#0a0a0a]"
-            >
-              Friends
-            </Link>
-            <Link
-              href="/profile"
-              className="inline-flex items-center justify-center rounded-full border border-[#e5e7eb] bg-white px-5 py-3 text-sm font-semibold text-[#0a0a0a]"
-            >
-              Profile
-            </Link>
-            <div className="col-span-2 flex justify-end sm:col-span-1">
-              <UserButton />
-            </div>
-          </div>
-        </header>
+        <Header
+          title="Dashboard"
+          subtitle={`Logged in as ${clerkUser.emailAddresses[0]?.emailAddress ?? ""}`}
+        />
 
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <MetricCard

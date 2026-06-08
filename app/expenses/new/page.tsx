@@ -1,10 +1,8 @@
-import Link from "next/link";
-import { UserButton } from "@clerk/nextjs";
 import { currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import ExpenseCreateTabs from "@/app/expenses/ExpenseCreateTabs";
 import StatusToast from "@/components/StatusToast";
-import BrandLogo from "@/components/BrandLogo";
+import Header from "@/components/Header";
 import { ensureUserInDB } from "@/lib/actions/user";
 import { prisma } from "@/lib/db";
 import { isProfileComplete } from "@/lib/profile";
@@ -42,29 +40,9 @@ export default async function ExpenseCreatePage({
   });
 
   return (
-    <main className="min-h-screen bg-zinc-50 px-4 py-6 text-zinc-950 sm:py-8">
-      <div className="mx-auto flex w-full max-w-5xl flex-col gap-6">
-        <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <BrandLogo href="/dashboard" className="text-sm" />
-            <h1 className="text-2xl font-bold sm:text-3xl">Record expense</h1>
-          </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <Link
-              href="/expenses"
-              className="text-sm font-medium text-zinc-600 hover:text-zinc-950"
-            >
-              Expenses
-            </Link>
-            <Link
-              href="/friends"
-              className="text-sm font-medium text-zinc-600 hover:text-zinc-950"
-            >
-              Friends
-            </Link>
-            <UserButton />
-          </div>
-        </header>
+    <main className="min-h-screen bg-white px-4 py-5 text-[#0a0a0a] sm:px-6 sm:py-6 lg:px-8">
+      <div className="mx-auto flex w-full max-w-5xl flex-col gap-8">
+        <Header title="Create expense" />
 
         <StatusToast error={params.error} success={params.success} />
 
