@@ -52,4 +52,4 @@ workers/**/logs/
 AGENTS.md
 DESIGN.md
 
-/deploy
+deploy/
