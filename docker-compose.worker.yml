@@ -26,6 +26,8 @@ services:
     build:
       context: .
       dockerfile: workers/whatsapp/Dockerfile
+    image: bayarlah-whatsapp-worker:local
+    pull_policy: build
     env_file:
       - .env.local
     environment:
