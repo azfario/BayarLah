@@ -16,7 +16,7 @@ const AMOUNT_LABEL_PATTERN =
 const RECIPIENT_LABEL_PATTERN =
   /\b(recipient name|recipient duitnow id|duitnow name|to account|recipient|receiver|beneficiary|payee|merchant|to)\b/i;
 const REFERENCE_LABEL_PATTERN =
-  /\b(ref(?:erence)? no|transaction id|transaction ref|receipt no|duitnow ref|payment ref|reference|rrn)\b/i;
+  /\b(ref(?:erence)? (?:id|no)|transaction id|transaction ref|receipt no|duitnow ref|payment ref|reference|rrn)\b/i;
 const PAYMENT_CODE_LABEL_PATTERN =
   /\b(recipient reference|recipient ref|payment details|remark|reference)\b/i;
 const TIMESTAMP_LABEL_PATTERN =
@@ -45,7 +45,7 @@ export function parseBankReceiptOcrText(ocrText: string): BankReceiptParseResult
   }
 
   const amountCents = extractAmountCents(lines);
-  const recipientText = extractLabeledValue(lines, RECIPIENT_LABEL_PATTERN);
+  const recipientText = extractLabeledValue(lines, RECIPIENT_LABEL_PATTERN, true);
   const paymentCode = extractLabeledPaymentCode(lines);
   const transactionReference = removePaymentCodeReference(
     extractLabeledValue(lines, REFERENCE_LABEL_PATTERN),
@@ -113,7 +113,7 @@ function removePaymentCodeReference(
 ) {
   if (!paymentCode) return transactionReference;
 
-  return extractPaymentCode(transactionReference) ? "" : transactionReference;
+  return extractPaymentCode(transactionReference) === paymentCode ? "" : transactionReference;
 }
 
 function extractLabeledPaymentCode(lines: string[]) {
@@ -246,7 +246,7 @@ function extractTngTimestampText(lines: string[]) {
   return extractTimestampText(lines);
 }
 
-function extractLabeledValue(lines: string[], labelPattern: RegExp) {
+function extractLabeledValue(lines: string[], labelPattern: RegExp, multiLine = false) {
   for (let index = 0; index < lines.length; index += 1) {
     const line = lines[index];
     if (!labelPattern.test(line)) continue;
@@ -254,8 +254,25 @@ function extractLabeledValue(lines: string[], labelPattern: RegExp) {
     const inlineValue = stripLabel(line, labelPattern);
     if (inlineValue) return inlineValue;
 
-    const nextLine = lines[index + 1];
-    if (nextLine && !looksLikeLabelOnly(nextLine)) return nextLine;
+    if (multiLine) {
+      const collectedLines: string[] = [];
+      let nextIndex = index + 1;
+      while (nextIndex < lines.length && !looksLikeLabelOnly(lines[nextIndex]) && !DATE_PATTERN.test(lines[nextIndex]) && !getLineAmountCents(lines[nextIndex])) {
+        collectedLines.push(lines[nextIndex]);
+        nextIndex += 1;
+      }
+      if (collectedLines.length > 0) return collectedLines.join(" ");
+    }
+
+    let nextIndex = index + 1;
+    while (nextIndex < lines.length) {
+      const nextLine = lines[nextIndex];
+      if (looksLikeLabelOnly(nextLine) || looksLikeStatusWord(nextLine)) {
+        nextIndex += 1;
+        continue;
+      }
+      return nextLine;
+    }
   }
 
   return "";
@@ -286,6 +303,10 @@ function looksLikeLabelOnly(line: string) {
     TIMESTAMP_LABEL_PATTERN.test(line) ||
     AMOUNT_LABEL_PATTERN.test(line)
   );
+}
+
+function looksLikeStatusWord(line: string) {
+  return /^[A-Za-z]+$/.test(line.trim());
 }
 
 function looksLikeTngLabelOnly(line: string) {
