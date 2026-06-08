@@ -703,7 +703,6 @@ function ReceiptUploadSection({
             name="receiptImage"
             type="file"
             accept="image/*"
-            capture="environment"
             required
             onChange={(event) => onFileChange(event.target.files?.[0] ?? null)}
             className="h-10 rounded-md border border-[#e5e7eb] bg-white px-3 py-2 text-sm outline-none focus:border-2 focus:border-[#1d4ed8]"
