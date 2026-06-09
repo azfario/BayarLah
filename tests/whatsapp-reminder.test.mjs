@@ -31,6 +31,6 @@ test("builds the friendly DuitNow reminder message", () => {
 test("builds the payment code message", () => {
   assert.equal(
     buildPaymentCodeMessage("48273195"),
-    "Payment code: *48273195*\nEnter this in the transfer Reference/Remark field."
+    "Payment code: **48273195**\nEnter this in the transfer Reference/Remark field."
   );
 });

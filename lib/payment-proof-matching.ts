@@ -160,6 +160,13 @@ async function resolveDebtorFriend(
     messageId: string;
   }
 ) {
+  // Reminder attempts identify *which debts* this inbound thread was reminded about.
+  // Compute them regardless of how the debtor identity resolves: a real phone tells us
+  // *who* paid, but the reminders tell us *which* of their debts — both are needed for
+  // the LID/amount auto-match.
+  const attemptRows = await findRemindedAttempts(tx, input);
+  const remindedShareIds = uniqueValues(attemptRows.map((attempt) => attempt.expenseShareId));
+
   const phone = getRealPhone(input.debtorPhone);
   if (phone) {
     const phoneMatches = await tx.friend.findMany({
@@ -171,28 +178,52 @@ async function resolveDebtorFriend(
     });
     const friendIds = uniqueValues(phoneMatches.map((friend) => friend.id));
     if (friendIds.length === 1) {
-      return { friendId: friendIds[0], reviewReason: null, remindedShareIds: [] };
+      return { friendId: friendIds[0], reviewReason: null, remindedShareIds };
     }
     if (friendIds.length > 1) {
       return {
         friendId: null,
         reviewReason: "Multiple debtor identities match the inbound phone.",
-        remindedShareIds: [],
+        remindedShareIds,
       };
     }
   }
 
+  const friendIds = uniqueValues(attemptRows.map((attempt) => attempt.friendId));
+
+  if (friendIds.length === 1) {
+    return { friendId: friendIds[0], reviewReason: null, remindedShareIds };
+  }
+  if (friendIds.length > 1) {
+    return {
+      friendId: null,
+      reviewReason: "Multiple debtor identities match the inbound WhatsApp thread.",
+      remindedShareIds,
+    };
+  }
+
+  return { friendId: null, reviewReason: "Could not resolve debtor identity.", remindedShareIds: [] };
+}
+
+async function findRemindedAttempts(
+  tx: Prisma.TransactionClient,
+  input: {
+    collectorId: string;
+    inboundChatId?: string | null;
+    inboundSenderId?: string | null;
+    senderSessionId?: string | null;
+    messageId: string;
+  }
+) {
   const identityKeys = getInboundIdentityKeys([
     input.inboundChatId,
     input.inboundSenderId,
     input.messageId,
   ]);
-  if (identityKeys.length === 0) {
-    return { friendId: null, reviewReason: "Could not resolve debtor identity.", remindedShareIds: [] };
-  }
+  if (identityKeys.length === 0) return [];
 
-  const attemptRows = input.senderSessionId
-    ? await tx.$queryRaw<{ friendId: string; expenseShareId: string }[]>`
+  return input.senderSessionId
+    ? tx.$queryRaw<{ friendId: string; expenseShareId: string }[]>`
     SELECT es."friendId", es."id" AS "expenseShareId"
     FROM "WhatsappReminderAttempt" AS wra
     JOIN "ExpenseShare" AS es
@@ -209,7 +240,7 @@ async function resolveDebtorFriend(
       )
     ORDER BY wra."createdAt" DESC
   `
-    : await tx.$queryRaw<{ friendId: string; expenseShareId: string }[]>`
+    : tx.$queryRaw<{ friendId: string; expenseShareId: string }[]>`
     SELECT es."friendId", es."id" AS "expenseShareId"
     FROM "WhatsappReminderAttempt" AS wra
     JOIN "ExpenseShare" AS es
@@ -225,21 +256,6 @@ async function resolveDebtorFriend(
       )
     ORDER BY wra."createdAt" DESC
   `;
-  const friendIds = uniqueValues(attemptRows.map((attempt) => attempt.friendId));
-  const remindedShareIds = uniqueValues(attemptRows.map((attempt) => attempt.expenseShareId));
-
-  if (friendIds.length === 1) {
-    return { friendId: friendIds[0], reviewReason: null, remindedShareIds };
-  }
-  if (friendIds.length > 1) {
-    return {
-      friendId: null,
-      reviewReason: "Multiple debtor identities match the inbound WhatsApp thread.",
-      remindedShareIds,
-    };
-  }
-
-  return { friendId: null, reviewReason: "Could not resolve debtor identity.", remindedShareIds: [] };
 }
 
 function decimalToCents(value: Prisma.Decimal) {

@@ -234,6 +234,55 @@ test("LID-reminded share already paid (absent from openShares) does not auto-con
   assert.equal(decision.reviewReason, "No unpaid debt matches the transfer amount.");
 });
 
+test("auto-confirms one open reminded share when another reminded debt was already paid", () => {
+  // Real case: debtor reminded about two debts (RM0.50 open, RM45.69 paid); the paid
+  // one is absent from openShares. OCR mis-parsed the date "20260609" as a payment code.
+  const decision = decidePaymentProofMatch({
+    ...baseInput,
+    amountCents: 50,
+    paymentCode: "20260609",
+    recipientText: "Name",
+    openShares: [{ id: "share_open", owedAmountCents: 50, paymentCode: "83008157" }],
+    remindedShareIds: ["share_open", "share_paid"],
+  });
+
+  assert.equal(decision.status, "AUTO_CONFIRMED");
+  assert.equal(decision.expenseShareId, "share_open");
+  assert.equal(decision.reviewReason, null);
+});
+
+test("amount disambiguates when multiple reminded debts are open", () => {
+  const decision = decidePaymentProofMatch({
+    ...baseInput,
+    amountCents: 50,
+    paymentCode: "20260609",
+    openShares: [
+      { id: "share_a", owedAmountCents: 50, paymentCode: "83008157" },
+      { id: "share_b", owedAmountCents: 4569, paymentCode: "11112222" },
+    ],
+    remindedShareIds: ["share_a", "share_b"],
+  });
+
+  assert.equal(decision.status, "AUTO_CONFIRMED");
+  assert.equal(decision.expenseShareId, "share_a");
+});
+
+test("multiple reminded debts with the same amount stay pending", () => {
+  const decision = decidePaymentProofMatch({
+    ...baseInput,
+    amountCents: 50,
+    openShares: [
+      { id: "share_a", owedAmountCents: 50, paymentCode: "83008157" },
+      { id: "share_b", owedAmountCents: 50, paymentCode: "11112222" },
+    ],
+    remindedShareIds: ["share_a", "share_b"],
+  });
+
+  assert.equal(decision.status, "PENDING_REVIEW");
+  assert.equal(decision.expenseShareId, null);
+  assert.equal(decision.reviewReason, "Multiple unpaid debts match the transfer amount.");
+});
+
 test("duplicate image still wins over a valid LID + amount match", () => {
   const decision = decidePaymentProofMatch({
     ...baseInput,

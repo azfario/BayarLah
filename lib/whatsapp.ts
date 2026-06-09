@@ -57,7 +57,7 @@ export function buildWhatsAppReminderMessage({
 }
 
 export function buildPaymentCodeMessage(paymentCode: string) {
-  return `Payment code: *${paymentCode}*\nEnter this in the transfer Reference/Remark field.`;
+  return `Payment code: **${paymentCode}**\nEnter this in the transfer Reference/Remark field.`;
 }
 
 export function getNextReminderAtFromCadence(

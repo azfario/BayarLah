@@ -43,17 +43,20 @@ export function decidePaymentProofMatch(
   }
 
   // When a SENT reminder was delivered to this exact inbound thread, the WhatsApp
-  // routing (LID/chat-id) is stronger evidence than OCR-parsed codes. Auto-confirm
-  // if exactly one reminded share is still open and the receipt amount matches.
-  const remindedOpen = input.openShares.filter((s) =>
-    input.remindedShareIds.includes(s.id)
-  );
-  if (remindedOpen.length === 1 && input.amountCents !== null) {
-    const share = remindedOpen[0];
-    if (share.owedAmountCents === input.amountCents) {
+  // routing (LID/chat-id) is stronger evidence than OCR-parsed codes. Among the
+  // reminded shares that are still open, auto-confirm if exactly one matches the
+  // receipt amount — the amount disambiguates when a debtor was reminded about
+  // several debts.
+  if (input.amountCents !== null) {
+    const remindedAmountMatches = input.openShares.filter(
+      (s) =>
+        input.remindedShareIds.includes(s.id) &&
+        s.owedAmountCents === input.amountCents
+    );
+    if (remindedAmountMatches.length === 1) {
       return {
         status: "AUTO_CONFIRMED",
-        expenseShareId: share.id,
+        expenseShareId: remindedAmountMatches[0].id,
         reviewReason: null,
         rejectedReason: null,
       };
