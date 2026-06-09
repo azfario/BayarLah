@@ -241,7 +241,7 @@ async function processInboundPaymentProofMessages(
 
         const result = await handleInboundPaymentProofImage({
           collectorId: route.collectorId,
-          debtorPhone: debtorPhone ?? route.debtorPhone,
+          debtorPhone,
           inboundChatId,
           inboundSenderId,
           senderSessionId: botSession.sessionId,
@@ -370,7 +370,7 @@ async function processInboundPaymentProofWebhook(payload: unknown) {
 
     const result = await handleInboundPaymentProofImage({
       collectorId: route.collectorId,
-      debtorPhone: debtorPhone ?? route.debtorPhone,
+      debtorPhone,
       inboundChatId,
       inboundSenderId,
       senderSessionId: botSession.sessionId,
