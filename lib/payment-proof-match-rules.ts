@@ -13,6 +13,8 @@ export type PaymentProofMatchInput = {
   collectorDuitNowIdValue: string | null;
   openShares: OpenPaymentShare[];
   debtorIdentityReviewReason?: string | null;
+  /** Share ids from SENT reminder attempts that targeted this inbound thread. */
+  remindedShareIds: string[];
   isDuplicateImage: boolean;
   isDuplicateTransactionReference: boolean;
   confidenceNotes: string[];
@@ -38,6 +40,24 @@ export function decidePaymentProofMatch(
 
   if (input.debtorIdentityReviewReason) {
     return pendingDecision(null, input.debtorIdentityReviewReason);
+  }
+
+  // When a SENT reminder was delivered to this exact inbound thread, the WhatsApp
+  // routing (LID/chat-id) is stronger evidence than OCR-parsed codes. Auto-confirm
+  // if exactly one reminded share is still open and the receipt amount matches.
+  const remindedOpen = input.openShares.filter((s) =>
+    input.remindedShareIds.includes(s.id)
+  );
+  if (remindedOpen.length === 1 && input.amountCents !== null) {
+    const share = remindedOpen[0];
+    if (share.owedAmountCents === input.amountCents) {
+      return {
+        status: "AUTO_CONFIRMED",
+        expenseShareId: share.id,
+        reviewReason: null,
+        rejectedReason: null,
+      };
+    }
   }
 
   if (input.paymentCode) {

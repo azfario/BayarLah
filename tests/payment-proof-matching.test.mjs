@@ -12,6 +12,7 @@ const baseInput = {
   openShares: [
     { id: "share_1", owedAmountCents: 5000, paymentCode: "48273195" },
   ],
+  remindedShareIds: [],
   isDuplicateImage: false,
   isDuplicateTransactionReference: false,
   confidenceNotes: [],
@@ -182,6 +183,63 @@ test("duplicate protection runs before payment-code matching", () => {
   const decision = decidePaymentProofMatch({
     ...baseInput,
     paymentCode: "48273195",
+    isDuplicateImage: true,
+  });
+
+  assert.equal(decision.status, "DUPLICATE_REJECTED");
+  assert.equal(decision.rejectedReason, "Duplicate receipt image.");
+});
+
+// LID-based auto-match tests
+
+test("auto-confirms via reminded share even when OCR parsed a wrong payment code", () => {
+  // Reproduces: bank Reference ID "82573501" parsed as code, real code "54033537" not on receipt.
+  const decision = decidePaymentProofMatch({
+    ...baseInput,
+    amountCents: 1300,
+    paymentCode: "82573501",
+    recipientText: "Name",
+    openShares: [{ id: "share_1", owedAmountCents: 1300, paymentCode: "54033537" }],
+    remindedShareIds: ["share_1"],
+  });
+
+  assert.equal(decision.status, "AUTO_CONFIRMED");
+  assert.equal(decision.expenseShareId, "share_1");
+  assert.equal(decision.reviewReason, null);
+});
+
+test("falls through to review when reminded share amount does not match receipt", () => {
+  const decision = decidePaymentProofMatch({
+    ...baseInput,
+    amountCents: 1299,
+    openShares: [{ id: "share_1", owedAmountCents: 1300, paymentCode: "54033537" }],
+    remindedShareIds: ["share_1"],
+  });
+
+  assert.equal(decision.status, "PENDING_REVIEW");
+  assert.equal(decision.expenseShareId, null);
+  assert.equal(decision.reviewReason, "No unpaid debt matches the transfer amount.");
+});
+
+test("LID-reminded share already paid (absent from openShares) does not auto-confirm", () => {
+  // The reminded share id is not in openShares (already paid), so remindedOpen is empty.
+  const decision = decidePaymentProofMatch({
+    ...baseInput,
+    amountCents: 1300,
+    openShares: [],
+    remindedShareIds: ["share_paid"],
+  });
+
+  assert.equal(decision.status, "PENDING_REVIEW");
+  assert.equal(decision.reviewReason, "No unpaid debt matches the transfer amount.");
+});
+
+test("duplicate image still wins over a valid LID + amount match", () => {
+  const decision = decidePaymentProofMatch({
+    ...baseInput,
+    amountCents: 5000,
+    openShares: [{ id: "share_1", owedAmountCents: 5000, paymentCode: "54033537" }],
+    remindedShareIds: ["share_1"],
     isDuplicateImage: true,
   });
 

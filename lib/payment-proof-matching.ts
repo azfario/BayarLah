@@ -87,6 +87,7 @@ export async function createMatchedPaymentProof(input: CreatePaymentProofMatchIn
         paymentCode: share.paymentCode,
       })),
       debtorIdentityReviewReason: resolvedDebtor.reviewReason,
+      remindedShareIds: resolvedDebtor.remindedShareIds,
       isDuplicateImage: Boolean(duplicate?.imageHash),
       isDuplicateTransactionReference: Boolean(
         input.parsedTransactionReference &&
@@ -170,12 +171,13 @@ async function resolveDebtorFriend(
     });
     const friendIds = uniqueValues(phoneMatches.map((friend) => friend.id));
     if (friendIds.length === 1) {
-      return { friendId: friendIds[0], reviewReason: null };
+      return { friendId: friendIds[0], reviewReason: null, remindedShareIds: [] };
     }
     if (friendIds.length > 1) {
       return {
         friendId: null,
         reviewReason: "Multiple debtor identities match the inbound phone.",
+        remindedShareIds: [],
       };
     }
   }
@@ -186,12 +188,12 @@ async function resolveDebtorFriend(
     input.messageId,
   ]);
   if (identityKeys.length === 0) {
-    return { friendId: null, reviewReason: "Could not resolve debtor identity." };
+    return { friendId: null, reviewReason: "Could not resolve debtor identity.", remindedShareIds: [] };
   }
 
   const attemptRows = input.senderSessionId
-    ? await tx.$queryRaw<{ friendId: string }[]>`
-    SELECT es."friendId"
+    ? await tx.$queryRaw<{ friendId: string; expenseShareId: string }[]>`
+    SELECT es."friendId", es."id" AS "expenseShareId"
     FROM "WhatsappReminderAttempt" AS wra
     JOIN "ExpenseShare" AS es
       ON es."id" = wra."expenseShareId"
@@ -207,8 +209,8 @@ async function resolveDebtorFriend(
       )
     ORDER BY wra."createdAt" DESC
   `
-    : await tx.$queryRaw<{ friendId: string }[]>`
-    SELECT es."friendId"
+    : await tx.$queryRaw<{ friendId: string; expenseShareId: string }[]>`
+    SELECT es."friendId", es."id" AS "expenseShareId"
     FROM "WhatsappReminderAttempt" AS wra
     JOIN "ExpenseShare" AS es
       ON es."id" = wra."expenseShareId"
@@ -224,18 +226,20 @@ async function resolveDebtorFriend(
     ORDER BY wra."createdAt" DESC
   `;
   const friendIds = uniqueValues(attemptRows.map((attempt) => attempt.friendId));
+  const remindedShareIds = uniqueValues(attemptRows.map((attempt) => attempt.expenseShareId));
 
   if (friendIds.length === 1) {
-    return { friendId: friendIds[0], reviewReason: null };
+    return { friendId: friendIds[0], reviewReason: null, remindedShareIds };
   }
   if (friendIds.length > 1) {
     return {
       friendId: null,
       reviewReason: "Multiple debtor identities match the inbound WhatsApp thread.",
+      remindedShareIds,
     };
   }
 
-  return { friendId: null, reviewReason: "Could not resolve debtor identity." };
+  return { friendId: null, reviewReason: "Could not resolve debtor identity.", remindedShareIds: [] };
 }
 
 function decimalToCents(value: Prisma.Decimal) {
