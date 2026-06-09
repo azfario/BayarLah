@@ -3,6 +3,7 @@
 import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import ReminderFrequencyPicker from "@/components/ReminderFrequencyPicker";
+import ImageLightbox from "@/components/ImageLightbox";
 import { parseReceipt, saveReceiptExpense } from "@/lib/actions/receipts";
 import {
   distributeEvenly,
@@ -505,9 +506,7 @@ export default function ReceiptWizard({
           <div className="hidden min-w-0 gap-6 md:grid lg:grid-cols-[300px_minmax(0,1fr)]">
             {receiptPreviewUrl ? (
               <aside className="rounded-xl border border-[#e5e7eb] bg-white p-4 shadow-sm">
-                {/* Blob previews are local-only and cannot use Next image optimization. */}
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
+                <ImageLightbox
                   src={receiptPreviewUrl}
                   alt="Temporary receipt preview"
                   className="max-h-[620px] w-full rounded-md object-contain"
@@ -737,9 +736,7 @@ function ReceiptUploadSection({
 
       {receiptPreviewUrl && !draft ? (
         <div className="mt-4 rounded-lg border border-[#e5e7eb] bg-[#f7f8fa] p-3">
-          {/* Blob previews are local-only and cannot use Next image optimization. */}
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
+          <ImageLightbox
             src={receiptPreviewUrl}
             alt="Temporary receipt preview"
             className="max-h-72 w-full rounded-md object-contain"
@@ -770,11 +767,9 @@ function MobileReceiptSummary({
   return (
     <section className="flex min-w-0 items-center gap-3 rounded-xl border border-[#e5e7eb] bg-white p-3 shadow-sm md:hidden">
       {receiptPreviewUrl ? (
-        // Blob previews are local-only and cannot use Next image optimization.
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
+        <ImageLightbox
           src={receiptPreviewUrl}
-          alt=""
+          alt="Receipt preview"
           className="h-14 w-14 shrink-0 rounded-lg border border-[#e5e7eb] object-cover"
         />
       ) : null}

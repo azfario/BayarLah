@@ -2,6 +2,8 @@ import Link from "next/link";
 import { Prisma } from "@prisma/client";
 import { currentUser } from "@clerk/nextjs/server";
 import Header from "@/components/Header";
+import ImageLightbox from "@/components/ImageLightbox";
+import MobileExpenseDisclosure from "@/components/MobileExpenseDisclosure";
 import { redirect } from "next/navigation";
 import StatusToast from "@/components/StatusToast";
 import SubmitButton from "@/components/SubmitButton";
@@ -208,8 +210,7 @@ export default async function ExpensesPage({ searchParams }: ExpensesPageProps) 
                     <div className="grid gap-4 md:grid-cols-[140px_1fr]">
                       <div className="overflow-hidden rounded-xl border border-[#e5e7eb] bg-white">
                         {imageUrl ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
+                          <ImageLightbox
                             src={imageUrl}
                             alt="Payment proof screenshot"
                             className="h-44 w-full object-cover"
@@ -338,7 +339,7 @@ export default async function ExpensesPage({ searchParams }: ExpensesPageProps) 
 
           {expenses.length > 0 ? (
             <div className="mt-4 divide-y divide-[#eaecf0]">
-              {expenses.map((expense) => (
+              {expenses.slice(0, 1).map((expense) => (
                 <article key={expense.id} className="py-4">
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div className="min-w-0">
@@ -490,6 +491,162 @@ export default async function ExpensesPage({ searchParams }: ExpensesPageProps) 
                   ) : null}
                 </article>
               ))}
+              {expenses.length > 1 ? (
+                <MobileExpenseDisclosure count={expenses.length - 1}>
+                  {expenses.slice(1).map((expense) => (
+                      <article key={expense.id} className="py-4">
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                          <div className="min-w-0">
+                            <h3 className="break-words font-semibold">{expense.description}</h3>
+                            <p className="text-sm text-[#5f5f5f]">
+                              {expense.splitMode === "EQUAL_SPLIT" ? "Equal split" : "Custom amounts"} -{" "}
+                              Total paid {formatMoney(expense.totalAmount)}
+                            </p>
+                          </div>
+                          <div className="flex flex-col gap-3 sm:items-end">
+                            <p className="text-sm text-[#5f5f5f] sm:text-right">
+                              Your amount {formatMoney(expense.collectorAmount)}
+                            </p>
+                            <form action={deleteExpense} className="w-full sm:w-auto">
+                              <input type="hidden" name="expenseId" value={expense.id} />
+                              <SubmitButton
+                                variant="danger"
+                                pendingLabel="Removing..."
+                                className="w-full px-3 py-2 text-sm sm:w-auto"
+                              >
+                                Remove
+                              </SubmitButton>
+                            </form>
+                          </div>
+                        </div>
+
+                        <div className="mt-3 grid gap-2 md:grid-cols-2">
+                          {expense.shares.map((share) => {
+                            const latestAttempt = share.whatsappReminderAttempts[0];
+                            const paidAt = paidAtByShareId.get(share.id) ?? null;
+                            const isPaid = Boolean(paidAt);
+
+                            return (
+                              <div
+                                key={share.id}
+                                className="flex flex-col gap-3 rounded-xl bg-[#f7f8fa] px-3 py-3 text-sm sm:flex-row sm:items-start sm:justify-between sm:py-2"
+                              >
+                                <div className="min-w-0">
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <span className="break-words">
+                                      {share.friend.name}{" "}
+                                      <span className="break-all text-zinc-500">
+                                        ({share.friend.phone})
+                                      </span>
+                                    </span>
+                                    <span
+                                      className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
+                                        isPaid
+                                          ? "bg-[#e8ffea] text-[#1ba673]"
+                                          : "bg-amber-100 text-amber-700"
+                                      }`}
+                                    >
+                                      {isPaid ? "Paid" : "Unpaid"}
+                                    </span>
+                                  </div>
+                                  {latestAttempt ? (
+                                    <span className="mt-1 block text-xs text-[#5f5f5f]">
+                                      {getWhatsAppAttemptLabel(latestAttempt)}
+                                    </span>
+                                  ) : null}
+                                </div>
+                                <div className="flex w-full flex-col items-stretch gap-2 text-left sm:w-auto sm:items-end sm:text-right">
+                                  <span>
+                                    <span className="block font-medium">
+                                      {formatMoney(share.owedAmount)}
+                                    </span>
+                                    <span className="block text-xs text-[#5f5f5f]">
+                                      {paidAt
+                                        ? `Paid ${sharePaidDateFormatter.format(paidAt)}`
+                                        : getReminderStatusLabel(share)}
+                                    </span>
+                                  </span>
+                                  {!isPaid && share.reminderStatus === "ACTIVE" ? (
+                                    <form
+                                      action={queueExpenseShareReminderNow}
+                                      className="w-full sm:w-auto"
+                                    >
+                                      <input type="hidden" name="shareId" value={share.id} />
+                                      <SubmitButton
+                                        variant="secondary"
+                                        pendingLabel="Queueing..."
+                                        className="w-full px-3 py-2 text-xs sm:w-auto sm:py-1"
+                                      >
+                                        Send now
+                                      </SubmitButton>
+                                    </form>
+                                  ) : null}
+                                  <form
+                                    action={
+                                      isPaid ? markExpenseShareUnpaid : markExpenseSharePaid
+                                    }
+                                    className="w-full sm:w-auto"
+                                  >
+                                    <input type="hidden" name="shareId" value={share.id} />
+                                    <SubmitButton
+                                      variant="secondary"
+                                      pendingLabel={isPaid ? "Marking..." : "Settling..."}
+                                      className="w-full px-3 py-2 text-xs sm:w-auto sm:py-1"
+                                    >
+                                      {isPaid ? "Mark unpaid" : "Mark paid"}
+                                    </SubmitButton>
+                                  </form>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+
+                        {expense.receiptItems.length > 0 ? (
+                          <div className="mt-4 rounded-2xl border border-[#e5e7eb] bg-[#f7f8fa] p-4">
+                            <div className="flex flex-wrap items-center gap-3 text-sm text-[#0a0a0a]">
+                              {expense.receiptMerchantName ? (
+                                <span className="font-medium">
+                                  {expense.receiptMerchantName}
+                                </span>
+                              ) : null}
+                              {expense.receiptDate ? <span>{expense.receiptDate}</span> : null}
+                              <span className="text-[#5f5f5f]">
+                                Receipt items saved. Photo was not stored.
+                              </span>
+                            </div>
+
+                            <div className="mt-3 grid gap-2">
+                              {expense.receiptItems.map((item) => (
+                                <div
+                                  key={item.id}
+                                  className="rounded-md bg-white px-3 py-2 text-sm"
+                                >
+                                  <div className="flex items-start justify-between gap-3">
+                                    <span className="min-w-0 break-words font-medium">
+                                      {item.name}
+                                    </span>
+                                    <span className="shrink-0">{formatMoney(item.amount)}</span>
+                                  </div>
+                                  <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-[#5f5f5f]">
+                                    {item.allocations.map((allocation) => (
+                                      <span key={allocation.id}>
+                                        {allocation.participantType === "COLLECTOR"
+                                          ? "You"
+                                          : allocation.friend?.name ?? "Removed friend"}
+                                        : {formatMoney(allocation.amount)}
+                                      </span>
+                                    ))}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ) : null}
+                      </article>
+                  ))}
+                </MobileExpenseDisclosure>
+              ) : null}
             </div>
           ) : (
             <div className="mt-4 rounded-2xl bg-[#f7f8fa] px-4 py-5 text-sm text-[#5f5f5f]">
