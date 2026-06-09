@@ -15,6 +15,7 @@ import {
   sendOpenWaText,
 } from "../../lib/openwa.js";
 import { handleInboundPaymentProofImage } from "../../lib/payment-proof-inbound.js";
+import { createServerSupabaseClient } from "../../lib/supabase/server.js";
 import {
   classifyWhatsappMessage,
   getWhatsappMessageId,
@@ -768,6 +769,14 @@ async function sendPaymentProofWorkerNotifications(input: {
       context: `collector auto-confirm notice for proof ${proof.id}`,
     });
 
+    await sendCollectorReceiptImageSafely({
+      botSessionId: input.botSessionId,
+      phone: input.collector.phone,
+      imageStoragePath: proof.imageStoragePath,
+      caption: `Receipt from ${debtorName} — ${amountLabel} for ${expenseDescription}.`,
+      context: `collector receipt image for proof ${proof.id}`,
+    });
+
     await sendOpenWaTextSafely({
       sessionId: input.botSessionId,
       phone: debtorPhone,
@@ -834,6 +843,33 @@ async function sendUnmatchedPaymentProofReply(input: {
     ].join("\n"),
     context: `unmatched payment proof ${input.messageId}`,
   });
+}
+
+async function sendCollectorReceiptImageSafely(input: {
+  botSessionId: string;
+  phone: string | null;
+  imageStoragePath: string;
+  caption: string;
+  context: string;
+}) {
+  if (!input.phone) return;
+
+  try {
+    const supabase = createServerSupabaseClient();
+    const { data } = await supabase.storage
+      .from("payment-proofs")
+      .createSignedUrl(input.imageStoragePath, 60 * 10);
+    if (!data?.signedUrl) return;
+
+    await sendOpenWaImage({
+      sessionId: input.botSessionId,
+      chatId: toOpenWaChatId(input.phone),
+      imageUrl: data.signedUrl,
+      caption: input.caption,
+    });
+  } catch (error) {
+    console.error(`Failed to send ${input.context}: ${getErrorMessage(error)}`);
+  }
 }
 
 async function sendOpenWaTextToChatSafely(input: {

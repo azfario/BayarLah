@@ -2,7 +2,7 @@ services:
   openwa-api:
     image: ghcr.io/rmyndharis/openwa:0.1.6
     environment:
-      API_MASTER_KEY: "dev-admin-key"
+      API_MASTER_KEY: "${OPENWA_API_KEY:-dev-admin-key}"
       NODE_ENV: "development"
       PORT: "2785"
       DATABASE_TYPE: "sqlite"
@@ -32,7 +32,7 @@ services:
       - .env.local
     environment:
       OPENWA_API_BASE_URL: "http://openwa-api:2785/api"
-      OPENWA_API_KEY: "dev-admin-key"
+      OPENWA_API_KEY: "${OPENWA_API_KEY:-dev-admin-key}"
       OPENWA_PAYMENT_PROOF_WEBHOOK_URL: "http://whatsapp-worker.local:3099/openwa/payment-proof-webhook"
       WHATSAPP_WORKER_INTERVAL_MS: "${WHATSAPP_WORKER_INTERVAL_MS:-60000}"
       WHATSAPP_RETRY_DELAY_MS: "${WHATSAPP_RETRY_DELAY_MS:-900000}"

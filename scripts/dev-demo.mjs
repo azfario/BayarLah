@@ -16,7 +16,7 @@ const env = {
 };
 
 applyDefault(env, "OPENWA_API_BASE_URL", "http://localhost:2785/api");
-env.OPENWA_API_KEY = "dev-admin-key";
+applyDefault(env, "OPENWA_API_KEY", "dev-admin-key");
 applyDefault(env, "WHATSAPP_LOG_EMPTY_POLLS", "true");
 applyDefault(env, "WHATSAPP_WORKER_INTERVAL_MS", "5000");
 applyDefault(env, "WHATSAPP_RETRY_DELAY_MS", "60000");
