@@ -147,7 +147,11 @@ function trimTngFooter(lines: string[]) {
 
 function extractAmountCents(lines: string[]) {
   const candidates = lines
-    .map((line, index) => ({ line, index, amount: getLineAmountCents(line) }))
+    .map((line, index) => ({
+      line,
+      index,
+      amount: getLineAmountCents(line) ?? getSplitLineAmountCents(lines, index),
+    }))
     .filter((candidate) => candidate.amount !== null)
     .map((candidate) => ({
       ...candidate,
@@ -156,6 +160,17 @@ function extractAmountCents(lines: string[]) {
     .sort((a, b) => b.score - a.score || a.index - b.index);
 
   return candidates[0]?.amount ?? null;
+}
+
+// Bank Islam puts "RM" on one line and "90.00" on the next.
+function getSplitLineAmountCents(lines: string[], index: number) {
+  if (!/^(?:RM|MYR)$/i.test(lines[index].trim())) return null;
+  const next = lines[index + 1]?.trim() ?? "";
+  const match = next.match(/^([0-9][0-9,]*(?:\.\d{2})?)$/);
+  if (!match) return null;
+  const amount = Number(match[1].replace(/,/g, ""));
+  if (!Number.isFinite(amount) || amount <= 0) return null;
+  return Math.round(amount * 100);
 }
 
 function getLineAmountCents(line: string) {

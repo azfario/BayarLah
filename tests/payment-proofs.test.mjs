@@ -229,3 +229,25 @@ test("flags low-confidence OCR text", () => {
   assert.ok(parsed.confidenceNotes.includes("Missing recipient text."));
   assert.ok(parsed.confidenceNotes.includes("Missing transaction reference."));
 });
+
+test("parses Bank Islam receipt where RM and amount are on separate lines", () => {
+  const parsed = parseBankReceiptOcrText(`
+Scan
+Transfer Successful
+RM
+90.00
+AHMAD AZFAR BIN MOHD NIZAM
+10 Jun 2026 8:00:33MYT
+BANK ISLAM
+Reference Number
+260610200012630686666
+DuitNow Ref Number
+20260610BIMBMYKL0400QR001238
+From
+ENCIK LUTFIL HADI BIN KAMALLUDDIN
+**********5581
+  `);
+
+  assert.equal(parsed.provider, "GENERIC_BANK");
+  assert.equal(parsed.amountCents, 9000);
+});
