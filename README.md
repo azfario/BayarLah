@@ -138,4 +138,4 @@ See [deploy/README.md](deploy/README.md) for the full Vercel + Supabase + Clerk 
 |---|---|
 | **Google Gemini** (`gemini-2.5-flash`) | Parses raw OCR text from receipts into structured line items; extracts amount and reference number from inbound payment proof images |
 | **OCR.space** | Converts receipt image uploads to raw text before Gemini parsing |
-| **Claude (Anthropic)** | Used as a coding assistant throughout development — architecture decisions, component design, debugging, and writing tests |
+| **Claude (Anthropic)** | Used as a coding assistant throughout development — code writing, debugging, and writing tests, every architectural decision & design is owned by us |
