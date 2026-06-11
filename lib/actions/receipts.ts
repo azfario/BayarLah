@@ -601,7 +601,6 @@ async function fetchGeminiReceiptJson(
       parts: [{ text: prompt }],
     },
   ];
-  const thinkingConfig = { thinkingLevel: "MINIMAL" };
   const requestBodies = [
     {
       contents,
@@ -612,7 +611,6 @@ async function fetchGeminiReceiptJson(
             schema: RECEIPT_SCHEMA,
           },
         },
-        thinkingConfig,
       },
     },
     {
@@ -620,14 +618,12 @@ async function fetchGeminiReceiptJson(
       generationConfig: {
         responseMimeType: "application/json",
         responseSchema: RECEIPT_SCHEMA,
-        thinkingConfig,
       },
     },
     {
       contents,
       generationConfig: {
         responseMimeType: "application/json",
-        thinkingConfig,
       },
     },
   ];

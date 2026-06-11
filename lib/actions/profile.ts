@@ -98,7 +98,6 @@ async function extractRecipientNameWithGemini(ocrText: string): Promise<string> 
         },
         required: ["recipientName"],
       },
-      thinkingConfig: { thinkingLevel: "MINIMAL" },
     },
   };
 
